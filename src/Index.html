@@ -1,0 +1,1186 @@
+<!-- Index.html — RS Acciones (Acciones + Tablero Entidades + Carga + Admin + Mediciones + Calendario + Modal Edit) -->
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <base target="_top" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <?!= include('Style'); ?>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">RS • Acciones</div>
+        <div class="sub" id="buildInfo">Cargando…</div>
+      </div>
+
+      <div class="controls">
+        <!-- Tabs -->
+        <button class="btn ghost active" id="tabAcciones">Tablero Acciones</button>
+        <button class="btn ghost" id="tabTableroEntidades">Tablero Entidades</button>
+        <button class="btn ghost" id="tabCarga">Carga Acciones</button>
+        <button class="btn ghost" id="tabAdmin">Carga Entidades</button>
+        <button class="btn ghost" id="tabMediciones">Mediciones</button>
+
+        <!-- ✅ NUEVO: Calendario -->
+        <button class="btn ghost" id="tabCalendario">Calendario</button>
+
+        <!-- ✅ SACADO: btnRefresh ya no va acá -->
+
+        <!-- Admin controls (compat) -->
+        <button class="btn" id="btnAdminRefresh" style="display:none;">Refrescar Admin</button>
+      </div>
+    </div>
+
+    <!-- =========================
+         ACCIONES VIEW
+    ========================== -->
+    <div id="viewAcciones">
+      <div class="panel">
+
+<div class="listHeader" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+  <h2 class="listTitle" style="margin:0;">Listado</h2>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button class="btn" id="btnRefresh">Refrescar</button>
+    <button class="btn primary" id="btnExport">Exportar (Excel)</button>
+  </div>
+</div>
+
+        <div class="filters listFilters">
+          <div>
+            <label for="q">Buscar</label>
+            <input id="q" class="input" placeholder='Ej: "Bienestar" / "Realizado" / "AR-010"...' />
+          </div>
+<!-- Año -->
+<div>
+  <label for="anioFiltro">Año</label>
+  <select id="anioFiltro" class="input">
+    <option value="">Todos</option>
+  </select>
+</div>
+
+<!-- Tipo de acción -->
+<div>
+  <label for="tipoAccionFiltro">Tipo de acción</label>
+  <select id="tipoAccionFiltro" class="input"></select>
+</div>
+
+<!-- Eje de gobierno -->
+<div>
+  <label for="ejeGobFiltro">Eje de gobierno</label>
+  <select id="ejeGobFiltro" class="input"></select>
+</div>
+
+<!-- Línea temática -->
+<div>
+  <label for="lineaTematicaFiltro">Línea temática</label>
+  <select id="lineaTematicaFiltro" class="input"></select>
+</div>
+
+          <div>
+            <label for="estadoFiltro">Estado</label>
+            <select id="estadoFiltro"></select>
+          </div>
+
+          <div class="filtersActions">
+            <label>&nbsp;</label>
+            <button class="btn" id="btnClear">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="tableWrap">
+          <div class="scrollX">
+            <table>
+              <thead>
+                <tr id="theadRow"></tr>
+              </thead>
+              <tbody id="tbody">
+                <tr><td class="empty">Cargando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="footerMeta">
+          <div id="metaLeft">—</div>
+          <div id="metaRight">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================
+         TABLERO ENTIDADES VIEW
+    ========================== -->
+    <section id="viewTableroEntidades" style="display:none;">
+      <div class="panel">
+        <div class="entBoard">
+
+          <div>
+            <h2 style="margin:0;">TABLERO ENTIDADES</h2>
+            <div class="hint" style="margin-top:6px;">Entidades privadas, Áreas GCBA y Personas.</div>
+          </div>
+
+          <div class="entBar">
+            <div class="entBarLeft">
+
+              <div class="entField w240">
+                <label for="entKind">Tipo</label>
+                <select id="entKind" class="input">
+                  <option value="entidad_privada">Entidades Privadas</option>
+                  <option value="area_gcba">Áreas GCBA</option>
+                  <option value="persona">Personas</option>
+                </select>
+              </div>
+
+              <div class="entField w360">
+                <label for="entQ">Buscar</label>
+                <input id="entQ" class="input" placeholder="Buscar..." />
+              </div>
+
+            </div>
+
+            <div class="entBarRight">
+              <button id="btnEntClear" class="btn">Limpiar</button>
+              <button id="btnEntRefresh" class="btn primary">Refrescar</button>
+            </div>
+          </div>
+
+          <!-- Filtros solo para entidades privadas -->
+          <div class="entBar" id="entFilters" style="display:none;">
+            <div class="entBarLeft" style="width:100%;">
+
+              <div class="entField w300" id="entSectorWrap">
+                <label for="entSector">Sector</label>
+                <select id="entSector" class="input">
+                  <option value="">(todos)</option>
+                </select>
+              </div>
+
+              <div class="entField w300" id="entRubroWrap">
+                <label for="entRubro">Rubro</label>
+                <select id="entRubro" class="input">
+                  <option value="">(todos)</option>
+                </select>
+              </div>
+
+              <div class="entField w240" id="entComunaWrap">
+                <label for="entComuna">Comuna</label>
+                <select id="entComuna" class="input">
+                  <option value="">(todos)</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="entMetaRow">
+            <div id="entMeta">—</div>
+            <div id="entMetaRight" class="muted"></div>
+          </div>
+
+          <div class="tableWrap entTable">
+            <div class="scrollX">
+              <table>
+                <thead><tr id="entTheadRow"></tr></thead>
+                <tbody id="entBody">
+                  <tr><td class="empty">Elegí un tipo y refrescá.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================
+         CARGA VIEW
+    ========================== -->
+    <div id="viewCarga" style="display:none;">
+      <div class="panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <h2 style="margin:0;">Cargar acción</h2>
+            <div class="hint" id="createHint" style="margin-top:6px;">
+              Se genera <b>ID</b> automático al guardar. Campos habilitados según <b>Estado</b>.
+            </div>
+          </div>
+
+          <div class="rowBtns">
+            <button class="btn primary" id="btnCreateSave">Guardar</button>
+            <button class="btn" id="btnCreateClose">Volver</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:14px;">
+          <!-- IDENTIFICACIÓN -->
+          <div class="section" id="c_sec_ident">
+            <div class="sectionTitle">Identificación</div>
+
+            <div class="grid1">
+              <div>
+                <label>Nombre de la acción *</label>
+                <input id="c_nombre_accion" class="input" placeholder="Ej: Inauguración Centro..." />
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div>
+                <label>Fecha de acción *</label>
+                <input id="c_fecha_accion_iso" class="input" type="date" />
+              </div>
+
+              <div>
+                <label>Estado de acción *</label>
+                <div id="c_cb_estado_accion"></div>
+              </div>
+            </div>
+
+            <div class="grid1" style="margin-top:10px;">
+              <div>
+                <label>Tipo de acción *</label>
+                <div id="c_cb_tipo_accion"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLASIFICACIÓN -->
+          <div class="section" style="margin-top:14px;" id="c_sec_clas">
+            <div class="sectionTitle">Clasificación</div>
+
+            <div class="grid2">
+              <div>
+                <label>Línea temática</label>
+                <div id="c_cb_linea_tematica"></div>
+              </div>
+              <div>
+                <label>Producción (GCBA / ENTE / CONJUNTA)</label>
+                <div id="c_cb_produccion_tipo"></div>
+              </div>
+            </div>
+
+            <div class="grid1" style="margin-top:10px;">
+              <div>
+                <label>Eje de gobierno</label>
+                <div id="c_cb_eje"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ORGANIZADORES -->
+          <div class="section" style="margin-top:14px;" id="c_sec_org">
+            <div class="sectionTitle">Organizadores</div>
+
+            <div class="grid3">
+              <div>
+                <label>Ente organizador 1 (Privado)</label>
+                <div id="c_cb_ente1"></div>
+              </div>
+              <div>
+                <label>Ente organizador 2 (Privado)</label>
+                <div id="c_cb_ente2"></div>
+              </div>
+              <div>
+                <label>Ente organizador 3 (Privado)</label>
+                <div id="c_cb_ente3"></div>
+              </div>
+            </div>
+
+            <div class="grid3" style="margin-top:10px;">
+              <div>
+                <label>Área GCBA organizadora 1</label>
+                <div id="c_cb_area1"></div>
+              </div>
+              <div>
+                <label>Área GCBA organizadora 2</label>
+                <div id="c_cb_area2"></div>
+              </div>
+              <div>
+                <label>Área GCBA organizadora 3</label>
+                <div id="c_cb_area3"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOGÍSTICA -->
+          <div class="section" style="margin-top:14px;" id="c_sec_log">
+            <div class="sectionTitle">Logística</div>
+
+            <div class="grid3">
+              <div>
+                <label>Lugar</label>
+                <div id="c_cb_lugar"></div>
+              </div>
+              <div>
+                <label>Territorio (SI/NO)</label>
+                <div id="c_cb_territorio"></div>
+              </div>
+              <div>
+                <label>Contratación de personal (SI/NO)</label>
+                <div id="c_cb_contratacion"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PARTICIPACIÓN -->
+          <div class="section" style="margin-top:14px;" id="c_sec_part">
+            <div class="sectionTitle">Participación</div>
+
+            <div class="grid1">
+              <div>
+                <label>Participantes (Entidad)</label>
+
+                <div class="rowInline">
+                  <div><div id="c_cb_part_ent"></div></div>
+                  <div><div id="c_cb_ent_status"></div></div>
+                  <button class="btn" id="c_ent_add">Agregar</button>
+                </div>
+
+                <div class="chips" id="c_ent_chips"></div>
+              </div>
+
+              <div>
+                <label>Participantes (Persona)</label>
+
+                <div class="rowInline">
+                  <div><div id="c_cb_part_per"></div></div>
+                  <div><div id="c_cb_per_status"></div></div>
+                  <button class="btn" id="c_per_add">Agregar</button>
+                </div>
+
+                <div class="chips" id="c_per_chips"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- IMPACTO -->
+          <div class="section" style="margin-top:14px;" id="c_sec_imp">
+            <div class="sectionTitle">Impacto</div>
+
+            <div class="grid2">
+              <div>
+                <label>Tipo de indicador</label>
+                <div id="c_cb_tipo_indicador"></div>
+              </div>
+              <div>
+                <label>Impacto (numérico)</label>
+                <input
+                  id="c_impacto_numerico"
+                  class="input"
+                  type="number"
+                  inputmode="numeric"
+                  step="1"
+                  min="0"
+                  placeholder="Ej: 120"
+                />
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label>Comentarios</label>
+              <textarea id="c_comentarios" placeholder="Contexto, acuerdos, observaciones…"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================
+         ADMIN VIEW (CARGA ENTIDADES)
+    ========================== -->
+    <div id="viewAdmin" style="display:none;">
+      <div class="panel adminShell">
+
+        <div class="adminHeader" style="align-items:flex-start;">
+          <div class="adminHeaderLeft">
+            <div class="adminKicker">CARGA</div>
+            <div class="adminTitle">Carga de Entidades</div>
+            <div class="adminSub">
+              Alta de <b>Entidades</b> + <b>Persona de contacto</b> (se guarda en <b>ENTIDADES_PRIVADAS</b> y <b>PERSONAS</b>)
+            </div>
+          </div>
+
+          <div class="adminHeaderRight" style="display:flex; gap:10px; align-items:center;">
+            <select id="adm_module" class="input selectDark" style="min-width:340px;">
+              <option value="entidad_privada" selected>Entidades Privadas (ENTIDADES_PRIVADAS)</option>
+              <option value="area_contacto">Áreas GCBA (AREAS_GCBA)</option>
+              <option value="persona_reconocida">Personas reconocidas (PERSONAS)</option>
+            </select>
+            <button class="btn" id="btnAdminRefresh2">Refrescar</button>
+          </div>
+        </div>
+
+        <!-- PANEL 1 -->
+        <div class="adminCard" id="admPanel_entidad_privada">
+          <!-- ENTIDAD -->
+          <div class="section" style="margin-top:0;">
+            <div class="sectionTitle">ENTIDAD</div>
+
+            <div class="adminFormGrid2">
+              <div style="grid-column:1 / -1;">
+                <label>Nombre *</label>
+                <input id="ep_ente_nombre" class="input" placeholder="Ej: Fundación OSDE" />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Sector *</label>
+                <div id="ep_cb_sector"></div>
+              </div>
+              <div>
+                <label>Rubro *</label>
+                <div id="ep_cb_rubro"></div>
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Zona de cobertura *</label>
+                <div id="ep_cb_zona_cobertura"></div>
+              </div>
+              <div>
+                <label>Zona (Comuna) *</label>
+                <div id="ep_cb_zona_comuna"></div>
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Dirección</label>
+                <input id="ep_direccion" class="input" placeholder="Calle 123, CABA" />
+              </div>
+              <div>
+                <label>Web</label>
+                <input id="ep_web" class="input" placeholder="https://..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Estado de contacto *</label>
+                <div id="ep_cb_estado_contacto"></div>
+              </div>
+              <div>
+                <label>Red de discapacidad *</label>
+                <div id="ep_cb_red_discapacidad"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label>Observaciones</label>
+              <textarea id="ep_observaciones" placeholder="Notas, acuerdos, etc."></textarea>
+            </div>
+          </div>
+
+          <!-- PERSONA -->
+          <div class="section" style="margin-top:14px;">
+            <div class="sectionTitle">PERSONA (CONTACTO)</div>
+
+            <div class="adminFormGrid2">
+              <div style="grid-column:1 / -1;">
+                <label>Entidad vinculada</label>
+                <div class="input" style="display:flex; align-items:center; height:44px;">
+                  <span id="ep_con_entidad_lbl" class="muted">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Nombre *</label>
+                <input id="ep_con_nombre" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>Apellido *</label>
+                <input id="ep_con_apellido" class="input" placeholder="..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Cargo</label>
+                <input id="ep_con_cargo" class="input" placeholder="Ej: Coordinación / Referente..." />
+              </div>
+              <div>
+                <label>Mail</label>
+                <input id="ep_con_mail" class="input" placeholder="nombre@..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Teléfono</label>
+                <input id="ep_con_telefono" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>DNI</label>
+                <input id="ep_con_dni" class="input" placeholder="..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div style="grid-column:1 / -1;">
+                <label>Red de Discapacidad (auto)</label>
+                <input id="ep_con_red_discapacidad" class="input" disabled />
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label>Observaciones</label>
+              <textarea id="ep_con_observaciones" placeholder="Notas, acuerdos, etc."></textarea>
+            </div>
+
+            <div class="hint" id="ep_contacto_hint" style="margin-top:10px;">
+              * Obligatorio: Nombre y Apellido.
+            </div>
+          </div>
+
+          <div class="adminActions">
+            <button class="btn primary" id="ep_btn_guardar">Guardar</button>
+            <button class="btn" id="ep_btn_limpiar">Limpiar</button>
+          </div>
+
+          <div class="adminMini">
+            <div class="adminMiniHead">
+              <div>Resultado</div>
+              <div class="muted" id="ep_result_meta">—</div>
+            </div>
+            <div class="adminMiniBody" id="ep_result_box">
+              <div class="muted">Todavía no se guardó nada.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2 -->
+        <div class="adminCard" id="admPanel_area_contacto" style="display:none;">
+
+          <div class="section" style="margin-top:0;">
+            <div class="sectionTitle">ÁREA (GCBA)</div>
+
+            <div class="adminFormGrid2">
+              <div style="grid-column:1 / -1;">
+                <label>Nombre del Área *</label>
+                <input id="ac_area_nombre" class="input" placeholder="Ej: Dirección General de..." />
+                <div class="hint" style="margin-top:6px;">
+                  Solo se pide el <b>nombre</b>. El <b>ID de área</b> se genera automáticamente.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top:14px;">
+            <div class="sectionTitle">PERSONA (CONTACTO)</div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Nombre *</label>
+                <input id="ac_con_nombre" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>Apellido *</label>
+                <input id="ac_con_apellido" class="input" placeholder="..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Cargo</label>
+                <input id="ac_con_cargo" class="input" placeholder="Ej: Referente / Coordinación..." />
+              </div>
+              <div>
+                <label>Rol</label>
+                <input id="ac_con_rol" class="input" placeholder="Ej: Punto focal / Responsable..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Mail</label>
+                <input id="ac_con_mail" class="input" placeholder="nombre@..." />
+              </div>
+              <div>
+                <label>Teléfono</label>
+                <input id="ac_con_telefono" class="input" placeholder="..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>DNI</label>
+                <input id="ac_con_dni" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>Red de Discapacidad</label>
+                <select id="ac_con_red_discapacidad" class="input selectDark">
+                  <option value="No" selected>No</option>
+                  <option value="Sí">Sí</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label>Observaciones</label>
+              <textarea id="ac_con_observaciones" placeholder="Notas, acuerdos, etc."></textarea>
+            </div>
+
+            <div class="hint" style="margin-top:10px;">
+              * Obligatorio: <b>Nombre</b> y <b>Apellido</b>.
+            </div>
+          </div>
+
+          <div class="adminActions">
+            <button class="btn primary" id="ac_btn_guardar">Guardar</button>
+            <button class="btn" id="ac_btn_limpiar">Limpiar</button>
+          </div>
+
+          <div class="adminMini">
+            <div class="adminMiniHead">
+              <div>Resultado</div>
+              <div class="muted" id="ac_result_meta">—</div>
+            </div>
+            <div class="adminMiniBody" id="ac_result_box">
+              <div class="muted">Todavía no se guardó nada.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- PANEL 3 -->
+        <div class="adminCard" id="admPanel_persona_reconocida" style="display:none;">
+
+          <div class="section" style="margin-top:0;">
+            <div class="sectionTitle">PERSONA RECONOCIDA</div>
+
+            <div class="adminFormGrid2">
+              <div>
+                <label>Apellido *</label>
+                <input id="pr_per_apellido" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>Nombre *</label>
+                <input id="pr_per_nombre" class="input" placeholder="..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>DNI</label>
+                <input id="pr_per_dni" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>Mail</label>
+                <input id="pr_per_mail" class="input" placeholder="nombre@..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div>
+                <label>Teléfono</label>
+                <input id="pr_per_tel" class="input" placeholder="..." />
+              </div>
+              <div>
+                <label>Rol</label>
+                <input id="pr_per_rol" class="input" placeholder="Ej: Referente / Contacto..." />
+              </div>
+            </div>
+
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div style="grid-column:1 / -1;">
+                <label>Área (opcional)</label>
+                <div id="pr_cb_area_id"></div>
+                <div class="hint" style="margin-top:6px;">
+                  Si no corresponde a un área GCBA, dejalo vacío.
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label>Observaciones</label>
+              <textarea id="pr_per_obs" placeholder="Notas, acuerdos, etc."></textarea>
+            </div>
+
+            <div class="hint" id="pr_persona_hint" style="margin-top:10px;">
+              * Obligatorio: Apellido y Nombre.
+            </div>
+          </div>
+
+          <div class="adminActions">
+            <button class="btn primary" id="pr_btn_guardar">Guardar</button>
+            <button class="btn" id="pr_btn_limpiar">Limpiar</button>
+          </div>
+
+          <div class="adminMini">
+            <div class="adminMiniHead">
+              <div>Resultado</div>
+              <div class="muted" id="pr_result_meta">—</div>
+            </div>
+            <div class="adminMiniBody" id="pr_result_box">
+              <div class="muted">Todavía no se guardó nada.</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+<!-- =========================
+     MEDICIONES VIEW (Dashboard)
+     - Filtro por Año (default: más reciente)
+     - KPIs + Tabla por Línea Temática
+     - Exportar vista filtrada
+========================== -->
+<div id="viewMediciones" style="display:none;">
+  <div class="panel adminShell">
+
+    <div class="adminHeader">
+      <div class="adminHeaderLeft">
+        <div class="adminKicker">MEDICIONES</div>
+        <div class="adminTitle">RS • Mediciones</div>
+        <div class="adminSub">
+          Estadísticas de acciones por <b>año</b>, <b>línea temática</b> y <b>estado</b>.
+        </div>
+      </div>
+
+      <div class="adminHeaderRight">
+        <div class="adminBuildPill" id="medBuildPill">Build: —</div>
+      </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="adminControl" style="min-width:220px;">
+<label for="med_year">Año</label>
+<select id="med_year" class="input selectDark">
+  <option value="">Cargando…</option>
+</select>
+</div>
+
+
+      <div class="adminControl" style="min-width:260px;">
+        <label for="med_q">Buscar</label>
+        <input id="med_q" class="input" placeholder='Ej: "Discapacidad" / "Realizado" / "Bienestar"...' />
+      </div>
+
+      <div class="adminBtns">
+        <button class="btn" id="btnMedClear">Limpiar</button>
+        <button class="btn" id="btnMedRefresh">Refrescar</button>
+        <button class="btn primary" id="btnMedExport">Exportar Excel</button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div id="medKpis" style="
+      margin-top:12px;
+      display:grid;
+      grid-template-columns: repeat(6, minmax(140px, 1fr));
+      gap:12px;
+    ">
+      <div class="adminMini">
+        <div class="adminMiniHead"><div>Total</div><div class="muted" id="medKpiYear">—</div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiTotal">—</div></div>
+      </div>
+
+      <div class="adminMini">
+        <div class="adminMiniHead"><div>Realizadas</div><div class="muted">Estado</div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiRealizadas">—</div></div>
+      </div>
+
+      <div class="adminMini">
+        <div class="adminMiniHead"><div>En Desarrollo</div><div class="muted">Estado</div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiDesarrollo">—</div></div>
+      </div>
+
+      <div class="adminMini">
+        <div class="adminMiniHead"><div>Idea</div><div class="muted">Estado</div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiIdea">—</div></div>
+      </div>
+
+      <div class="adminMini">
+        <div class="adminMiniHead"><div>Pendientes</div><div class="muted">Calculado</div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiPendientes">—</div></div>
+      </div>
+
+      <div class="adminMini">
+        <div class="adminMiniHead"><div>Líneas</div><div class="muted">Únicas</div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiLineas">—</div></div>
+      </div>
+    </div>
+
+    <!-- Tabla por Línea Temática -->
+    <div class="adminCard" id="medCard_table" style="margin-top:12px;">
+      <div class="adminCardHead">
+        <div class="adminCardTitle">Acciones por Línea Temática</div>
+        <div class="adminTag">RESUMEN</div>
+      </div>
+      <div class="adminCardDesc" id="medTableDesc">
+        Mostrando —.
+      </div>
+
+      <div class="tableWrap" style="margin-top:10px;">
+        <div class="scrollX">
+          <table>
+            <thead>
+              <tr id="medThead">
+                <th style="text-align:left;">Línea temática</th>
+                <th>Total</th>
+                <th>Idea</th>
+                <th>En Desarrollo</th>
+                <th>Realizado</th>
+                <th>Otro</th>
+              </tr>
+            </thead>
+            <tbody id="medTbody">
+              <tr><td class="empty" colspan="6">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="footerMeta" style="margin-top:12px;">
+        <div id="medLeft" class="badge">—</div>
+        <div id="medRight" class="muted">—</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================
+     CALENDARIO VIEW (funcional - estructura)
+     - Grid 7x6 para MES
+     - IDs listos para bindear eventos y render desde App.html
+========================== -->
+<div id="viewCalendario" style="display:none;">
+  <div class="panel adminShell">
+
+    <!-- Header -->
+    <div class="adminHeader">
+      <div class="adminHeaderLeft">
+        <div class="adminKicker">CALENDARIO</div>
+        <div class="adminTitle">RS • Calendario</div>
+        <div class="adminSub">
+          Vista calendario de acciones (mes/semana/día) y agenda.
+        </div>
+      </div>
+
+      <div class="adminHeaderRight">
+        <div class="adminBuildPill" id="calBuildPill">Build: —</div>
+      </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="adminTopControls" style="align-items:flex-end;">
+      <div class="adminControl" style="min-width:220px;">
+        <label for="cal_mode">Vista</label>
+        <select id="cal_mode" class="input selectDark">
+          <option value="month" selected>Mes</option>
+          <option value="week">Semana</option>
+          <option value="day">Día</option>
+          <option value="agenda">Agenda</option>
+        </select>
+      </div>
+
+      <div class="adminControl" style="min-width:220px;">
+        <label for="cal_estado">Estado</label>
+        <select id="cal_estado" class="input selectDark">
+          <option value="" selected>(todos)</option>
+          <!-- App.html inyecta opciones -->
+        </select>
+      </div>
+
+      <div class="adminControl" style="min-width:260px;">
+        <label for="cal_q">Buscar</label>
+        <input id="cal_q" class="input" placeholder='Ej: "Bienestar" / "AR-010"...' />
+      </div>
+
+      <div class="adminBtns">
+        <button class="btn" id="btnCalPrev" title="Mes anterior">◀</button>
+        <button class="btn" id="btnCalToday" title="Ir a hoy">Hoy</button>
+        <button class="btn" id="btnCalNext" title="Mes siguiente">▶</button>
+        <button class="btn primary" id="btnCalRefresh" title="Refrescar datos">Refrescar</button>
+      </div>
+    </div>
+
+    <!-- Card principal -->
+    <div class="adminCard" id="calCard_main" style="margin-top:12px;">
+      <div class="adminCardHead" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div>
+          <div class="adminCardTitle" id="calTitle">Calendario</div>
+          <div class="adminCardDesc" id="calDesc" style="margin-top:4px;">
+            Mostrando acciones del mes —.
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+          <!-- (Opcional) Selector rápido de mes/año si querés después -->
+          <div class="adminTag">CAL</div>
+        </div>
+      </div>
+
+<!-- Contenido: Layout 1 columna (solo calendario) -->
+<div id="calLayout" style="
+  margin-top:12px;
+  display:block;
+">
+
+  <!-- ====== CALENDARIO ====== -->
+  <div class="adminMini" style="margin:0;">
+    <div class="adminMiniHead" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="muted" id="calMonthLabel">—</div>
+      </div>
+      <div class="muted" id="calRangeLabel">—</div>
+    </div>
+
+    <div class="adminMiniBody" style="padding:12px;">
+      <!-- Header días semana -->
+      <div id="calGridDOW" style="
+        display:grid;
+        grid-template-columns: repeat(7, minmax(120px, 1fr));
+        gap:10px;
+        margin-bottom:10px;
+        font-weight:700;
+        opacity:.7;
+        font-size:12px;
+        padding: 0 2px;
+      ">
+        <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+      </div>
+
+      <!-- Grilla (App.html renderiza aquí celdas y eventos) -->
+      <div id="calGridDays" style="
+        display:grid;
+        grid-template-columns: repeat(7, minmax(120px, 1fr));
+        gap:10px;
+      ">
+        <div class="muted" style="grid-column: 1 / -1; padding:10px 2px;">
+          Calendario listo. Falta que App.html renderice celdas y eventos.
+        </div>
+      </div>
+
+      <!-- Leyendas -->
+      <div id="calLegends" style="margin-top:14px;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <div class="muted" style="min-width:120px; font-weight:700;">Línea Temática</div>
+          <div id="calLegendLineas" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+          <div class="muted" style="min-width:120px; font-weight:700;">Estado</div>
+          <div id="calLegendEstados" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /calLayout -->
+    </div><!-- /adminCard -->
+
+    <!-- Footer meta -->
+    <div class="footerMeta" style="margin-top:14px;">
+      <div id="calLeft" class="badge">Calendario listo</div>
+      <div id="calRight" class="muted">—</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================
+     BOTÓN COMPAT (evita crash si App lo busca)
+========================== -->
+<button id="btnCreate" style="display:none;"></button>
+
+  <!-- =========================
+       MODAL EDIT (EDICIÓN)
+  ========================== -->
+  <div class="modalBack" id="editBack">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="modalTitle" id="editTitle">Editar acción</div>
+        <div class="rowBtns">
+          <button class="btn primary" id="btnSave">Guardar</button>
+          <button class="btn" id="btnClose">Cerrar</button>
+        </div>
+      </div>
+
+      <div class="modalBody">
+        <div class="hint" id="editHint"></div>
+
+        <!-- IDENTIFICACIÓN -->
+        <div class="section">
+          <div class="sectionTitle">Identificación</div>
+
+          <div class="grid1">
+            <div>
+              <label>Nombre de la acción</label>
+              <input id="f_nombre_accion" class="input" disabled />
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div>
+              <label>Fecha de acción *</label>
+              <input id="f_fecha_accion_iso" class="input" type="date" />
+            </div>
+
+            <div>
+              <label>Estado de acción *</label>
+              <div id="cb_estado_accion"></div>
+            </div>
+          </div>
+
+          <div class="grid1" style="margin-top:10px;">
+            <div>
+              <label>Tipo de acción *</label>
+              <div id="cb_tipo_accion"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLASIFICACIÓN -->
+        <div class="section" style="margin-top:14px;">
+          <div class="sectionTitle">Clasificación</div>
+
+          <div class="grid2">
+            <div>
+              <label>Línea temática</label>
+              <div id="cb_linea_tematica"></div>
+            </div>
+            <div>
+              <label>Producción (GCBA / ENTE / CONJUNTA)</label>
+              <div id="cb_produccion_tipo"></div>
+            </div>
+          </div>
+
+          <div class="grid1" style="margin-top:10px;">
+            <div>
+              <label>Eje de gobierno</label>
+              <div id="cb_eje"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORGANIZADORES -->
+        <div class="section" style="margin-top:14px;">
+          <div class="sectionTitle">Organizadores</div>
+
+          <div class="grid3">
+            <div>
+              <label>Ente organizador 1 (Privado)</label>
+              <div id="cb_ente1"></div>
+            </div>
+            <div>
+              <label>Ente organizador 2 (Privado)</label>
+              <div id="cb_ente2"></div>
+            </div>
+            <div>
+              <label>Ente organizador 3 (Privado)</label>
+              <div id="cb_ente3"></div>
+            </div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div>
+              <label>Área GCBA organizadora 1</label>
+              <div id="cb_area1"></div>
+            </div>
+            <div>
+              <label>Área GCBA organizadora 2</label>
+              <div id="cb_area2"></div>
+            </div>
+            <div>
+              <label>Área GCBA organizadora 3</label>
+              <div id="cb_area3"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOGÍSTICA -->
+        <div class="section" style="margin-top:14px;">
+          <div class="sectionTitle">Logística</div>
+
+          <div class="grid3">
+            <div>
+              <label>Lugar</label>
+              <div id="cb_lugar"></div>
+            </div>
+            <div>
+              <label>Territorio (SI/NO)</label>
+              <div id="cb_territorio"></div>
+            </div>
+            <div>
+              <label>Contratación de personal (SI/NO)</label>
+              <div id="cb_contratacion"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PARTICIPACIÓN -->
+        <div class="section" style="margin-top:14px;">
+          <div class="sectionTitle">Participación</div>
+
+          <div class="grid1">
+            <div>
+              <label>Participantes (Entidad)</label>
+
+              <div class="rowInline">
+                <div><div id="cb_part_ent"></div></div>
+                <div><div id="cb_ent_status"></div></div>
+                <button class="btn" id="ent_add">Agregar</button>
+              </div>
+
+              <div class="chips" id="ent_chips"></div>
+            </div>
+
+            <div>
+              <label>Participantes (Persona)</label>
+
+              <div class="rowInline">
+                <div><div id="cb_part_per"></div></div>
+                <div><div id="cb_per_status"></div></div>
+                <button class="btn" id="per_add">Agregar</button>
+              </div>
+
+              <div class="chips" id="per_chips"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- IMPACTO -->
+        <div class="section" style="margin-top:14px;">
+          <div class="sectionTitle">Impacto</div>
+
+          <div class="grid2">
+            <div>
+              <label>Tipo de indicador</label>
+              <div id="cb_tipo_indicador"></div>
+            </div>
+            <div>
+              <label>Impacto (numérico)</label>
+              <input
+                id="f_impacto_numerico"
+                class="input"
+                type="number"
+                inputmode="numeric"
+                step="1"
+                min="0"
+                placeholder="Ej: 120"
+              />
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label>Comentarios</label>
+            <textarea id="f_comentarios" placeholder="Contexto, acuerdos, observaciones…"></textarea>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <?!= include('App'); ?>
+</body>
+</html>

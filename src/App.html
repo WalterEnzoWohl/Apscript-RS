@@ -1,0 +1,4211 @@
+<!-- App.html — RS Acciones (JS) -->
+<script>
+  // ===== Estado =====
+  let ALL = [];
+  let FILTERED = [];
+  let META = null;
+
+  let DISPLAY_COLUMNS = [];
+  let LABELS = {};
+  let ESTADOS = [];
+  let CATALOGS = { areas: [], entes: [], personas: [] };
+  let VALIDATIONS = {};
+  let PARTICIPANT_STATES = [];
+
+
+  // Edición
+  let EDIT_ROW = null;
+  let entItems = [];
+  let perItems = [];
+
+  // ✅ Create
+  let cEntItems = [];
+  let cPerItems = [];
+
+  // Combos
+  const COMBOS = {};
+  const CCOMBOS = {};
+
+  // Admin combos
+  const ACOMBOS = {};
+
+  const $ = (id) => document.getElementById(id);
+
+const ACCIONES_FILTER_STATE = {
+  q: "",
+  estado: "",
+  year: "",
+  tipo: "",
+  eje: "",
+  linea: ""
+};
+
+  // ===== Utils =====
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+// ===== Refs DOM (filtros) =====
+let FILTERS = {
+  acciones: {
+    q: null,
+    estado: null,
+    year: null,
+    segTipo: null,
+    segEje: null,
+    segLinea: null,
+    btnClear: null,
+  },
+  entidades: { q: null, kind: null, sector: null, rubro: null, comuna: null },
+  mediciones: { q: null, year: null },
+};
+
+function initFiltersRefs_(){
+  FILTERS.acciones.q      = $("q");
+  FILTERS.acciones.estado = $("estadoFiltro");
+  FILTERS.acciones.year   = $("anioFiltro");
+  FILTERS.acciones.segTipo  = $("segTipoAccion");
+  FILTERS.acciones.segEje   = $("segEjeGob");
+  FILTERS.acciones.segLinea = $("segLineaTematica");
+  FILTERS.acciones.btnClear = $("btnClear");
+
+  // Entidades
+  FILTERS.entidades.q = $("entQ");
+  FILTERS.entidades.kind = $("entKind");
+  FILTERS.entidades.sector = $("entSector");
+  FILTERS.entidades.rubro  = $("entRubro");
+  FILTERS.entidades.comuna = $("entComuna");
+
+  // Mediciones
+  FILTERS.mediciones.q = $("med_q");
+  FILTERS.mediciones.year = $("metricsPeriodFilter") || $("med_year");
+}
+
+
+
+  function stateChip(state){
+    const st = (state || "").toUpperCase();
+    const cls = "chip state-" + (st || "NA");
+    const label = (state || "—");
+    return `<span class="${cls}"><span class="dot"></span>${escapeHtml(label)}</span>`;
+  }
+
+  function isoToDMY(iso){
+    const s = String(iso||"").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return "";
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
+
+  function dmyToISO(dmy){
+    const s = String(dmy||"").trim();
+    if (!s) return "";
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    const dd = String(m[1]).padStart(2,"0");
+    const mm = String(m[2]).padStart(2,"0");
+    const yyyy = m[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function parseJsonArray(s){
+    const txt = String(s||"").trim();
+    if (!txt) return [];
+    try{
+      const arr = JSON.parse(txt);
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){
+      return [];
+    }
+  }
+
+  function normalizeParticipant(p){
+    return {
+      type: String(p?.type || "").trim(),
+      id: String(p?.id || "").trim(),
+      name: String(p?.name || "").trim(),
+      invState: String(p?.invState || "").trim(),
+    };
+  }
+
+  function renderParticipantsCell(jsonStr){
+    const items = parseJsonArray(jsonStr).map(normalizeParticipant).filter(x => x.name || x.id);
+    if (!items.length) return `<span class="muted">—</span>`;
+
+    const pills = items.slice(0, 6).map(it => {
+      const main = it.name || it.id || "—";
+      const mini = [it.invState].filter(Boolean).join(" • ");
+      return `<span class="pill" title="${escapeHtml(JSON.stringify(it))}">
+        ${escapeHtml(main)}${mini ? ` <span class="mini">${escapeHtml(mini)}</span>` : ""}
+      </span>`;
+    }).join("");
+
+    const more = items.length > 6 ? `<span class="muted">+${items.length - 6} más</span>` : "";
+    return `<div class="pillList">${pills} ${more}</div>`;
+  }
+
+  function displayIdName(id, name){
+    if (!id && !name) return `<span class="muted">—</span>`;
+    const label = name ? `${id} • ${name}` : id;
+    return `<span class="cellWrap" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+  }
+
+  // ✅ Normalización robusta (case-insensitive + sin espacios/guiones)
+  function normKey(s){
+    return String(s ?? "")
+      .toLowerCase()
+      .replaceAll("_","")
+      .replaceAll(" ","")
+      .replaceAll("-","")
+      .trim();
+  }
+
+  // ✅ Get validations list: encuentra aunque en VALIDATIONS el campo sea CamelCase (TiposAccion)
+  function getValList(keys, fallback=[]){
+    const mapKeys = Object.keys(VALIDATIONS || {});
+    for (const k of (keys||[])){
+      // 1) match exacto
+      if (Array.isArray(VALIDATIONS[k]) && VALIDATIONS[k].length) return VALIDATIONS[k];
+
+      // 2) match normalizado por lookup directo (si alguien guardó key ya normalizada)
+      const nk = normKey(k);
+      if (Array.isArray(VALIDATIONS[nk]) && VALIDATIONS[nk].length) return VALIDATIONS[nk];
+
+      // 3) match normalizado recorriendo keys reales (TiposAccion == tiposaccion)
+      const hit = mapKeys.find(real => normKey(real) === nk);
+      if (hit && Array.isArray(VALIDATIONS[hit]) && VALIDATIONS[hit].length) return VALIDATIONS[hit];
+    }
+    return fallback;
+  }
+
+  // ===== Combobox pro =====
+  function createCombo(mountEl, {
+    placeholder="(seleccionar)",
+    options=[],
+    allowCustom=false,
+    clearLabel="Limpiar",
+    headerHint="Escribí para filtrar",
+    onChange=null,
+    readOnlyInput=false,            // ✅ bloquear tipeo (Admin campo)
+    showClear=true,                 // ✅ NUEVO: ocultar botón "Limpiar"
+    showHeader=true,                // ✅ NUEVO: ocultar header/buscador
+  }){
+    if (!mountEl) {
+      // evita romper si falta un contenedor en el HTML
+      return {
+        open(){}, close(){}, setOptions(){}, setValue(){}, clear(){},
+        getSelection(){ return { value:"", label:"", meta:null, typed:"" }; },
+        setDisabled(){},
+      };
+    }
+
+    const root = document.createElement("div");
+    root.className = "combo";
+
+    const input = document.createElement("input");
+    input.className = "comboInput";
+    input.placeholder = placeholder;
+    input.readOnly = !!readOnlyInput;   // ✅ aplica
+
+    const icon = document.createElement("div");
+    icon.className = "comboIcon";
+    icon.textContent = "▼";
+
+    const menu = document.createElement("div");
+    menu.className = "comboMenu";
+
+    // Header (opcional)
+    let header = null;
+    let btnClear = null;
+
+    if (showHeader){
+      header = document.createElement("div");
+      header.className = "comboMenuHeader";
+
+      const mini = document.createElement("div");
+      mini.className = "mini";
+      mini.textContent = headerHint;
+
+      const actions = document.createElement("div");
+      actions.className = "comboActions";
+
+      if (showClear){
+        btnClear = document.createElement("button");
+        btnClear.type = "button";
+        btnClear.className = "comboClear";
+        btnClear.textContent = clearLabel;
+        actions.appendChild(btnClear);
+      }
+
+      header.appendChild(mini);
+      header.appendChild(actions);
+
+      menu.appendChild(header);
+    }
+
+    const list = document.createElement("div");
+    list.className = "comboList";
+    menu.appendChild(list);
+
+    root.appendChild(input);
+    root.appendChild(icon);
+    root.appendChild(menu);
+
+    mountEl.innerHTML = "";
+    mountEl.appendChild(root);
+
+    let _open = false;
+    let _disabled = false;
+    let _options = normalizeOptions(options);
+    let _selectedValue = "";
+    let _selectedMeta = null;
+
+    function normalizeOptions(opts){
+      return (opts||[]).map(o=>{
+        if (o && typeof o === "object"){
+          return {
+            value: String(o.value ?? o.label ?? ""),
+            label: String(o.label ?? o.value ?? ""),
+            tag: o.tag ? String(o.tag) : "",
+            subtag: o.subtag ? String(o.subtag) : "",
+            meta: o.meta ?? null,
+          };
+        }
+        const s = String(o ?? "");
+        return { value: s, label: s, tag:"", subtag:"", meta:null };
+      }).filter(x => x.label);
+    }
+
+    function emitChange(){
+      if (typeof onChange === "function"){
+        try{ onChange(getSelection()); }catch(_){}
+      }
+    }
+
+    function open(){
+      if (_open || _disabled) return;
+      _open = true;
+      menu.classList.add("open");
+      render();
+    }
+    function close(){
+      _open = false;
+      menu.classList.remove("open");
+    }
+
+    function setOptions(newOptions){
+      _options = normalizeOptions(newOptions);
+      render();
+    }
+
+    function setValue(v){
+      const val = String(v||"").trim();
+      _selectedValue = val;
+      _selectedMeta = (_options.find(x => x.value === val)?.meta) ?? null;
+      const opt = _options.find(x => x.value === val);
+      input.value = opt ? opt.label : val;
+      emitChange();
+    }
+
+    function getSelection(){
+      const typed = String(input.value||"").trim();
+      const exact = _options.find(x => x.label === typed) || _options.find(x => x.value === typed);
+
+      if (exact){
+        _selectedValue = exact.value;
+        _selectedMeta = exact.meta ?? null;
+        return { value: exact.value, label: exact.label, meta: exact.meta ?? null, typed };
+      }
+
+      // ⚠️ Si no allowCustom, NO devuelve typed como value (evita error por tipeo)
+      if (allowCustom){
+        return { value: typed, label: typed, meta: null, typed };
+      }
+
+      if (_selectedValue){
+        const opt = _options.find(x => x.value === _selectedValue);
+        return { value: _selectedValue, label: opt?.label ?? _selectedValue, meta: _selectedMeta, typed };
+      }
+      return { value:"", label:"", meta:null, typed };
+    }
+
+    function clear(){
+      _selectedValue = "";
+      _selectedMeta = null;
+      input.value = "";
+      render();
+      emitChange();
+    }
+
+    function setDisabled(flag){
+      _disabled = !!flag;
+      input.disabled = _disabled;
+      if (btnClear) btnClear.disabled = _disabled;
+      if (_disabled) close();
+    }
+
+    function render(){
+      // ✅ IMPORTANTE:
+      // - si es "slider" (readOnlyInput), NO filtramos por texto (porque el input tiene el valor seleccionado)
+      const q = readOnlyInput ? "" : String(input.value||"").trim().toLowerCase();
+
+      const filtered = _options
+        .filter(o => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
+        .slice(0, 240);
+
+      list.innerHTML = "";
+      if (!filtered.length){
+        const empty = document.createElement("div");
+        empty.className = "comboEmpty";
+        empty.textContent = "Sin coincidencias";
+        list.appendChild(empty);
+        return;
+      }
+
+      filtered.forEach(o=>{
+        const it = document.createElement("div");
+        it.className = "comboItem";
+        it.innerHTML = `
+          <div>${escapeHtml(o.label)}</div>
+          <div class="right">
+            ${o.subtag ? `<span class="subtag">${escapeHtml(o.subtag)}</span>` : ""}
+            ${o.tag ? `<span class="tag">${escapeHtml(o.tag)}</span>` : ""}
+          </div>
+        `;
+        it.addEventListener("click", ()=>{
+          if (_disabled) return;
+          _selectedValue = o.value;
+          _selectedMeta = o.meta ?? null;
+          input.value = o.label;
+          close();
+          emitChange();
+        });
+        list.appendChild(it);
+      });
+    }
+
+    input.addEventListener("focus", open);
+
+    // ✅ Si es readOnlyInput, no hay "buscar": ignoramos input
+    if (!readOnlyInput){
+      input.addEventListener("input", ()=>{ open(); render(); });
+    }
+
+    if (btnClear){
+      btnClear.addEventListener("click", (e)=>{
+        e.preventDefault();
+        if (_disabled) return;
+        clear();
+        input.focus();
+      });
+    }
+
+    document.addEventListener("click", (e)=>{
+      if (!root.contains(e.target)) close();
+    });
+
+    input.addEventListener("keydown", (e)=>{
+      if (e.key === "Escape") close();
+      if (e.key === "ArrowDown") open();
+    });
+
+    // ✅ si está readOnly, click también abre
+    root.addEventListener("click", ()=>{
+      if (_disabled) return;
+      open();
+    });
+
+    return { open, close, setOptions, setValue, clear, getSelection, setDisabled };
+  }
+
+  function colLabel(col){
+    if (LABELS && LABELS[col]) return LABELS[col];
+    const map = {
+      lineaTematica: "Línea temática",   // ✅ antes subeje
+      meta_tipo: "Tipo de indicador",
+      participantes_entidad_json: "Participantes (Entidad)",
+      participantes_persona_json: "Participantes (Persona)",
+    };
+    return map[col] || col;
+  }
+
+function renderHeader(){
+  const base = DISPLAY_COLUMNS.map(c => `<th>${escapeHtml(colLabel(c))}</th>`).join("");
+  // ✅ Editar a la izquierda (primera columna)
+  $("theadRow").innerHTML = `<th>Editar</th>` + base;
+}
+
+
+  function cellHtml(row, col){
+    const v = row[col];
+
+    if (col === "estado_accion") return stateChip(v);
+
+    if (col.startsWith("area_gcba_org_") && col.endsWith("_id")){
+      const name = row[col + "_name"] || "";
+      return displayIdName(v, name);
+    }
+
+    if (col.startsWith("ente_org_") && col.endsWith("_id")){
+      const name = row[col + "_name"] || "";
+      return displayIdName(v, name);
+    }
+
+    if (col === "participantes_entidad_json" || col === "participantes_persona_json"){
+      return renderParticipantsCell(v);
+    }
+
+    const txt = String(v ?? "");
+    if (!txt) return `<span class="muted">—</span>`;
+    return `<span class="cellWrap" title="${escapeHtml(txt)}">${escapeHtml(txt)}</span>`;
+  }
+
+ function renderTable(){
+  const tb = $("tbody");
+
+  if (!FILTERED.length){
+    tb.innerHTML = `<tr><td class="empty" colspan="${DISPLAY_COLUMNS.length + 1}">Sin resultados.</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = FILTERED.map(r => {
+    const tds = DISPLAY_COLUMNS.map(col => `<td>${cellHtml(r, col)}</td>`).join("");
+    // ✅ Editar a la izquierda (primera columna)
+    return `<tr>
+      <td><button class="btn" data-edit="${escapeHtml(r.id_accion)}">Editar</button></td>
+      ${tds}
+    </tr>`;
+  }).join("");
+
+  tb.querySelectorAll("button[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-edit");
+      const row = ALL.find(x => x.id_accion === id);
+      if (row) openEdit(row);
+    });
+  });
+}
+
+function renderMeta(){
+  const left = $("metaLeft");
+  const right = $("metaRight");
+
+  if (left) left.textContent = `Mostrando ${FILTERED.length} de ${ALL.length}`;
+  if (right) right.textContent = META?.sheet ? `Fuente: ${META.sheet} • lastRow=${META.lastRow}` : "";
+}
+
+  function rowMatchesQuery(row, q){
+    if (!q) return true;
+    const needle = q.toLowerCase();
+
+    const hay = [
+      ...DISPLAY_COLUMNS.map(c => String(row[c] ?? "")),
+      row["area_gcba_org_1_id_name"] || "",
+      row["area_gcba_org_2_id_name"] || "",
+      row["area_gcba_org_3_id_name"] || "",
+      row["ente_org_1_id_name"] || "",
+      row["ente_org_2_id_name"] || "",
+      row["ente_org_3_id_name"] || "",
+    ].join(" | ").toLowerCase();
+
+    return hay.includes(needle);
+  }
+function yearFromIso_(iso){
+  const s = String(iso || "").trim();
+  const m = s.match(/^(\d{4})-\d{2}-\d{2}/);
+  return m ? m[1] : "";
+}
+
+function applyFilters(){
+  const { q, estado, year, tipo, eje, linea } = ACCIONES_FILTER_STATE;
+
+  FILTERED = (ALL || []).filter(r => {
+    if (estado && normText(r.estado_accion) !== normText(estado)) return false;
+    if (tipo && normText(r.tipo_accion) !== normText(tipo)) return false;
+    if (eje && normText(r.eje) !== normText(eje)) return false;
+
+    if (linea){
+      const v = r.lineaTematica || r.subeje || "";
+      if (normText(v) !== normText(linea)) return false;
+    }
+
+    if (year){
+      const y = yearFromIso_(r.fecha_accion);
+      if (y !== year) return false;
+    }
+
+    if (q && !rowMatchesQuery(r, q)) return false;
+
+    return true;
+  });
+
+  renderTable();
+  renderMeta();
+}
+
+function uniqSorted_(arr){
+  return Array.from(new Set((arr||[]).map(x=>String(x||"").trim()).filter(Boolean)))
+    .sort((a,b)=> a.localeCompare(b, "es", { sensitivity:"base" }));
+}
+
+function fillSelect_(el, values, { includeTodos=true } = {}){
+  if (!el) return;
+  const keep = String(el.value || "").trim();
+
+  el.innerHTML = "";
+  if (includeTodos){
+    const o = document.createElement("option");
+    o.value = "";
+    o.textContent = "Todos";
+    el.appendChild(o);
+  }
+
+  (values||[]).forEach(v=>{
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = v;
+    el.appendChild(o);
+  });
+
+  el.value = (values||[]).includes(keep) ? keep : "";
+}
+
+function getAccionesBaseFiltered_(){
+  const year = String(FILTERS.acciones.year?.value || "").trim();
+
+  return (Array.isArray(ALL) ? ALL : []).filter(r => {
+    if (!year) return true;
+    const y = yearFromIso_(r.fecha_accion);
+    return y === year;
+  });
+}
+
+function buildAccionesFilterOptions_(){
+  const year = ACCIONES_FILTER_STATE.year;
+
+  ACCIONES_FILTER_STATE.tipo  ||= "";
+  ACCIONES_FILTER_STATE.eje   ||= "";
+  ACCIONES_FILTER_STATE.linea ||= "";
+
+  // 🔹 BASE por año (datos reales)
+  const base = (Array.isArray(ALL) ? ALL : []).filter(r => {
+    if (!year) return true;
+    return yearFromIso_(r.fecha_accion) === year;
+  });
+
+  // 🔹 TIPO DE ACCIÓN desde VALIDACIONES_FILTRADAS POR AÑO
+  // Estructura esperada:
+  // VALIDATIONS.validaciones_filtros = { "2024": { tipo_accion:[...] }, "2025": {...} }
+  let tipos = [];
+  const vf = VALIDATIONS?.validaciones_filtros || {};
+  if (year && vf[year] && Array.isArray(vf[year].tipo_accion)) {
+    tipos = vf[year].tipo_accion.slice();
+  } else {
+    // fallback: lo que exista en los datos
+    tipos = uniqSorted_(base.map(r => r.tipo_accion));
+  }
+
+  const ejes   = uniqSorted_(base.map(r => r.eje));
+  const lineas = uniqSorted_(base.map(r => r.lineaTematica || r.linea_tematica || r.subeje));
+
+  if (ACCIONES_FILTER_STATE.tipo && !tipos.includes(ACCIONES_FILTER_STATE.tipo)) {
+    ACCIONES_FILTER_STATE.tipo = "";
+  }
+  if (ACCIONES_FILTER_STATE.eje && !ejes.includes(ACCIONES_FILTER_STATE.eje)) {
+    ACCIONES_FILTER_STATE.eje = "";
+  }
+  if (ACCIONES_FILTER_STATE.linea && !lineas.includes(ACCIONES_FILTER_STATE.linea)) {
+    ACCIONES_FILTER_STATE.linea = "";
+  }
+
+  buildSliderChips_(document.getElementById("segTipoAccion"), tipos, {
+    selected: ACCIONES_FILTER_STATE.tipo,
+    onChange: (v) => {
+      ACCIONES_FILTER_STATE.tipo = v;
+      applyFilters();
+    }
+  });
+
+  buildSliderChips_(document.getElementById("segEjeGob"), ejes, {
+    selected: ACCIONES_FILTER_STATE.eje,
+    onChange: (v) => {
+      ACCIONES_FILTER_STATE.eje = v;
+      applyFilters();
+    }
+  });
+
+  buildSliderChips_(document.getElementById("segLineaTematica"), lineas, {
+    selected: ACCIONES_FILTER_STATE.linea,
+    onChange: (v) => {
+      ACCIONES_FILTER_STATE.linea = v;
+      applyFilters();
+    }
+  });
+}
+
+
+function buildAccionesYearOptionsFromAll_(){
+  const sel = FILTERS?.acciones?.year || $("anioFiltro");
+  if (!sel) return;
+
+  const keep = String(sel.value || "").trim();
+
+  const years = Array.from(new Set(
+    (Array.isArray(ALL) ? ALL : [])
+      .map(r => yearFromIso_(r?.fecha_accion))
+      .filter(Boolean)
+  )).sort((a,b)=> Number(b) - Number(a));
+
+  // Siempre incluye "Todos" (value="")
+  sel.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "Todos";
+  sel.appendChild(optAll);
+
+  years.forEach(y=>{
+    const o = document.createElement("option");
+    o.value = y;
+    o.textContent = y;
+    sel.appendChild(o);
+  });
+
+  // preserva selección si todavía existe
+  if (keep && years.includes(keep)) sel.value = keep;
+  else sel.value = "";
+}
+
+function clearAccionesFilters_(){
+  ACCIONES_FILTER_STATE.q = "";
+  ACCIONES_FILTER_STATE.estado = "";
+  ACCIONES_FILTER_STATE.year = "";
+  ACCIONES_FILTER_STATE.tipo = "";
+  ACCIONES_FILTER_STATE.eje = "";
+  ACCIONES_FILTER_STATE.linea = "";
+
+  if (FILTERS.acciones.q) FILTERS.acciones.q.value = "";
+  if (FILTERS.acciones.estado) FILTERS.acciones.estado.value = "";
+  if (FILTERS.acciones.year) FILTERS.acciones.year.value = "";
+
+  setSegmentValue_(FILTERS.acciones.segTipo, "");
+  setSegmentValue_(FILTERS.acciones.segEje, "");
+  setSegmentValue_(FILTERS.acciones.segLinea, "");
+
+  applyFilters();
+}
+
+function bindAccionesFilters_(){
+  if (FILTERS.acciones.q){
+    FILTERS.acciones.q.addEventListener("input", e=>{
+      ACCIONES_FILTER_STATE.q = e.target.value || "";
+      applyFilters();
+    });
+  }
+
+  if (FILTERS.acciones.estado){
+    FILTERS.acciones.estado.addEventListener("change", e=>{
+      ACCIONES_FILTER_STATE.estado = e.target.value || "";
+      applyFilters();
+    });
+  }
+
+if (FILTERS.acciones.year){
+  FILTERS.acciones.year.addEventListener("change", e=>{
+    ACCIONES_FILTER_STATE.year = e.target.value || "";
+    ACCIONES_FILTER_STATE.tipo = "";
+    ACCIONES_FILTER_STATE.eje = "";
+    ACCIONES_FILTER_STATE.linea = "";
+    buildAccionesFilterOptions_();
+    applyFilters();
+  });
+}
+
+
+if (FILTERS.acciones.btnClear){
+  FILTERS.acciones.btnClear.addEventListener("click", ()=>{
+    ACCIONES_FILTER_STATE.q = "";
+    ACCIONES_FILTER_STATE.estado = "";
+    ACCIONES_FILTER_STATE.year = "";
+    ACCIONES_FILTER_STATE.tipo = "";
+    ACCIONES_FILTER_STATE.eje = "";
+    ACCIONES_FILTER_STATE.linea = "";
+
+    clearAccionesFilters_(); // ✅ usa tu función central
+  });
+}
+
+}
+
+  // ===== Participantes options =====
+  function buildParticipantEntityOptions(){
+    const opts = [];
+
+    (CATALOGS.areas||[]).forEach(a=>{
+      opts.push({
+        value: `AR:${a.id}`,
+        label: `${a.name} (${a.id})`,
+        tag: "GCBA",
+        subtag: "Área",
+        meta: { type:"Área GCBA", id:a.id, name:a.name }
+      });
+    });
+
+    (CATALOGS.entes||[]).forEach(e=>{
+      opts.push({
+        value: `EN:${e.id}`,
+        label: `${e.name} (${e.id})`,
+        tag: "PRIVADO",
+        subtag: "Ente",
+        meta: { type:"Entidad Privada", id:e.id, name:e.name }
+      });
+    });
+
+    return opts;
+  }
+
+  function buildParticipantPersonOptions(){
+    return (CATALOGS.personas||[]).map(p=>({
+      value: `PE:${p.id}`,
+      label: `${p.name} (${p.id})`,
+      tag: "PERSONA",
+      meta: { type:"Persona", id:p.id, name:p.name }
+    }));
+  }
+
+  function getParticipantKey(it){
+    if (it?.type && it?.id){
+      if (String(it.type).toLowerCase().includes("área")) return `AR:${it.id}`;
+      if (String(it.type).toLowerCase().includes("entidad")) return `EN:${it.id}`;
+      if (String(it.type).toLowerCase().includes("persona")) return `PE:${it.id}`;
+    }
+    return "";
+  }
+
+  function refreshParticipantOptionsFor(itemsEnt, itemsPer, comboEnt, comboPer){
+    const usedEnt = new Set((itemsEnt||[]).map(getParticipantKey).filter(Boolean));
+    const usedPer = new Set((itemsPer||[]).map(getParticipantKey).filter(Boolean));
+
+    const entOptsAll = buildParticipantEntityOptions();
+    const perOptsAll = buildParticipantPersonOptions();
+
+    const entOpts = entOptsAll.filter(o => !usedEnt.has(o.value));
+    const perOpts = perOptsAll.filter(o => !usedPer.has(o.value));
+
+    comboEnt?.setOptions(entOpts);
+    comboPer?.setOptions(perOpts);
+  }
+
+  function refreshParticipantOptions(){
+    refreshParticipantOptionsFor(entItems, perItems, COMBOS.part_ent, COMBOS.part_per);
+  }
+
+  function renderChips(containerId, items, kind, onRemove){
+    const box = $(containerId);
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    const pst = (PARTICIPANT_STATES && PARTICIPANT_STATES.length)
+      ? PARTICIPANT_STATES
+      : ["A invitar","Invitado","Confirmado","Participó","No participó","Cancelado"];
+
+    items.forEach((it, idx)=>{
+      const wrap = document.createElement("div");
+      wrap.className = "chipX";
+
+      const name = document.createElement("div");
+      name.className = "name";
+      name.title = `${it.type} • ${it.id || "(sin id)"}`;
+      name.textContent = it.name || it.id || "—";
+
+      const sel = document.createElement("select");
+      sel.className = "statusSel";
+      pst.forEach(v=>{
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = v;
+        sel.appendChild(o);
+      });
+      sel.value = it.invState || pst[0];
+      sel.addEventListener("change", ()=>{
+        it.invState = sel.value;
+      });
+
+      const del = document.createElement("button");
+      del.className = "btn";
+      del.textContent = "Quitar";
+      del.addEventListener("click", ()=>{
+        if (typeof onRemove === "function"){
+          onRemove(idx);
+        } else {
+          if (kind === "ent") entItems.splice(idx,1);
+          else perItems.splice(idx,1);
+        }
+        renderChips(containerId, items, kind, onRemove);
+        refreshParticipantOptions();
+      });
+
+      wrap.appendChild(name);
+      wrap.appendChild(sel);
+      wrap.appendChild(del);
+      box.appendChild(wrap);
+    });
+
+    if (!items.length){
+      const muted = document.createElement("div");
+      muted.className = "muted";
+      muted.textContent = "—";
+      box.appendChild(muted);
+    }
+  }
+
+  function buildAreasOpts(){
+    return (CATALOGS.areas||[]).map(a=>({
+      value: a.id,
+      label: `${a.id} • ${a.name}`,
+      tag: "GCBA",
+      meta: { id:a.id, name:a.name }
+    }));
+  }
+  function buildEntesOpts(){
+    return (CATALOGS.entes||[]).map(e=>({
+      value: e.id,
+      label: `${e.id} • ${e.name}`,
+      tag: "PRIVADO",
+      meta: { id:e.id, name:e.name }
+    }));
+  }
+
+  function refreshOrganizerOptions(){
+    const allEntes = buildEntesOpts();
+    const v1 = COMBOS.ente1?.getSelection().value || "";
+    const v2 = COMBOS.ente2?.getSelection().value || "";
+    const v3 = COMBOS.ente3?.getSelection().value || "";
+    const usedE = new Set([v1,v2,v3].filter(Boolean));
+
+    const opt1 = allEntes.filter(o => !usedE.has(o.value) || o.value === v1);
+    const opt2 = allEntes.filter(o => !usedE.has(o.value) || o.value === v2);
+    const opt3 = allEntes.filter(o => !usedE.has(o.value) || o.value === v3);
+
+    COMBOS.ente1?.setOptions(opt1);
+    COMBOS.ente2?.setOptions(opt2);
+    COMBOS.ente3?.setOptions(opt3);
+
+    const allAreas = buildAreasOpts();
+    const a1 = COMBOS.area1?.getSelection().value || "";
+    const a2 = COMBOS.area2?.getSelection().value || "";
+    const a3 = COMBOS.area3?.getSelection().value || "";
+    const usedA = new Set([a1,a2,a3].filter(Boolean));
+
+    const ao1 = allAreas.filter(o => !usedA.has(o.value) || o.value === a1);
+    const ao2 = allAreas.filter(o => !usedA.has(o.value) || o.value === a2);
+    const ao3 = allAreas.filter(o => !usedA.has(o.value) || o.value === a3);
+
+    COMBOS.area1?.setOptions(ao1);
+    COMBOS.area2?.setOptions(ao2);
+    COMBOS.area3?.setOptions(ao3);
+  }
+
+  function refreshCreateOrganizerOptions(){
+    const allEntes = buildEntesOpts();
+    const v1 = CCOMBOS.ente1?.getSelection().value || "";
+    const v2 = CCOMBOS.ente2?.getSelection().value || "";
+    const v3 = CCOMBOS.ente3?.getSelection().value || "";
+    const usedE = new Set([v1,v2,v3].filter(Boolean));
+
+    CCOMBOS.ente1?.setOptions(allEntes.filter(o => !usedE.has(o.value) || o.value === v1));
+    CCOMBOS.ente2?.setOptions(allEntes.filter(o => !usedE.has(o.value) || o.value === v2));
+    CCOMBOS.ente3?.setOptions(allEntes.filter(o => !usedE.has(o.value) || o.value === v3));
+
+    const allAreas = buildAreasOpts();
+    const a1 = CCOMBOS.area1?.getSelection().value || "";
+    const a2 = CCOMBOS.area2?.getSelection().value || "";
+    const a3 = CCOMBOS.area3?.getSelection().value || "";
+    const usedA = new Set([a1,a2,a3].filter(Boolean));
+
+    CCOMBOS.area1?.setOptions(allAreas.filter(o => !usedA.has(o.value) || o.value === a1));
+    CCOMBOS.area2?.setOptions(allAreas.filter(o => !usedA.has(o.value) || o.value === a2));
+    CCOMBOS.area3?.setOptions(allAreas.filter(o => !usedA.has(o.value) || o.value === a3));
+  }
+
+  function attachDatePicker(){
+    const dmy = $("f_fecha_accion_dmy");
+    const iso = $("f_fecha_accion_iso");
+    if (!dmy || !iso) return;
+
+    function maskDMY(el){
+      let v = String(el.value || "");
+      v = v.replace(/[^\d]/g, "").slice(0, 8);
+      if (v.length >= 5) v = v.slice(0,2) + "/" + v.slice(2,4) + "/" + v.slice(4);
+      else if (v.length >= 3) v = v.slice(0,2) + "/" + v.slice(2);
+      el.value = v;
+    }
+
+    function openPicker(){
+      if (iso && typeof iso.showPicker === "function"){
+        iso.showPicker();
+      } else {
+        iso.focus();
+        iso.click();
+      }
+    }
+
+    dmy.addEventListener("click", () => openPicker());
+    dmy.addEventListener("focus", () => openPicker());
+
+    dmy.addEventListener("input", ()=>{
+      maskDMY(dmy);
+      const v = dmy.value.trim();
+      if (!v) { iso.value = ""; return; }
+      const conv = dmyToISO(v);
+      if (conv === null) return;
+      iso.value = conv;
+    });
+
+    dmy.addEventListener("blur", ()=>{
+      const v = dmy.value.trim();
+      if (!v) return;
+      const conv = dmyToISO(v);
+      if (conv === null){
+        dmy.value = "";
+        iso.value = "";
+        alert("Fecha inválida. Usá dd/mm/aaaa.");
+        return;
+      }
+      iso.value = conv;
+    });
+
+    iso.addEventListener("change", ()=>{
+      dmy.value = isoToDMY(iso.value);
+    });
+  }
+
+  function attachCreateDatePicker(){
+    const dmy = $("c_fecha_accion_dmy");
+    const iso = $("c_fecha_accion_iso");
+    if (!dmy || !iso) return;
+
+    function maskDMY(el){
+      let v = String(el.value || "");
+      v = v.replace(/[^\d]/g, "").slice(0, 8);
+      if (v.length >= 5) v = v.slice(0,2) + "/" + v.slice(2,4) + "/" + v.slice(4);
+      else if (v.length >= 3) v = v.slice(0,2) + "/" + v.slice(2);
+      el.value = v;
+    }
+
+    function openPicker(){
+      if (iso && typeof iso.showPicker === "function"){
+        iso.showPicker();
+      } else {
+        iso.focus();
+        iso.click();
+      }
+    }
+
+    dmy.addEventListener("click", () => openPicker());
+    dmy.addEventListener("focus", () => openPicker());
+
+    dmy.addEventListener("input", ()=>{
+      maskDMY(dmy);
+      const v = dmy.value.trim();
+      if (!v) { iso.value = ""; return; }
+      const conv = dmyToISO(v);
+      if (conv === null) return;
+      iso.value = conv;
+    });
+
+    dmy.addEventListener("blur", ()=>{
+      const v = dmy.value.trim();
+      if (!v) return;
+      const conv = dmyToISO(v);
+      if (conv === null){
+        dmy.value = "";
+        iso.value = "";
+        alert("Fecha inválida. Usá dd/mm/aaaa.");
+        return;
+      }
+      iso.value = conv;
+    });
+
+    iso.addEventListener("change", ()=>{
+      dmy.value = isoToDMY(iso.value);
+    });
+  }
+
+  function buildEditControls(){
+    const estadoAccion = getValList(["estadoAccion","estado_accion","Estado Accion","EstadoAccion"], ["IDEA","DESARROLLO","REALIZADO","CANCELADO"]);
+    const tiposAccion = getValList(["tiposaccion","tipo_accion","tipoaccion","TiposAccion"], []);
+    const ejes = getValList(["ejes","eje","Ejes"], []);
+    const lineaTematica = getValList(["lineaTematica","LineaTematica","lineatematica","subeje","Subeje"], []);
+    const lugares = getValList(["territorios","territorio","lugar","lugares","Territorios","Lugar"],[] );
+    const metaTipos = getValList(["metatipos","meta_tipo","metatipo","metaTipo","MetaTipos"], []);
+
+    const pst = (PARTICIPANT_STATES && PARTICIPANT_STATES.length)
+      ? PARTICIPANT_STATES
+      : ["A invitar","Invitado","Confirmado","Participó","No participó","Cancelado"];
+    const pstOpts = pst.map(s=>({ value:s, label:s, tag:"" }));
+
+    const prodTipoOpts = [
+      { value:"CONJUNTA", label:"CONJUNTA", tag:"" },
+      { value:"GCBA", label:"GCBA", tag:"" },
+      { value:"ENTE", label:"ENTE", tag:"" },
+    ];
+
+    const siNoOpts = [
+      { value:"", label:"(seleccionar)" },
+      { value:"SI", label:"SI" },
+      { value:"NO", label:"NO" },
+    ];
+
+    COMBOS.estado_accion ??= createCombo($("cb_estado_accion"), {
+      placeholder:"(seleccionar)",
+      options: estadoAccion.map(x=>({value:String(x).toUpperCase(), label:String(x).toUpperCase()})),
+      allowCustom:false
+    });
+
+    COMBOS.tipo_accion ??= createCombo($("cb_tipo_accion"), { placeholder:"(seleccionar)", options: tiposAccion, allowCustom:false });
+    COMBOS.eje ??= createCombo($("cb_eje"), { placeholder:"(seleccionar)", options: ejes, allowCustom:false });
+    COMBOS.lineaTematica ??= createCombo($("cb_linea_tematica"), { placeholder:"(seleccionar)", options: lineaTematica, allowCustom:false });
+    COMBOS.lugar ??= createCombo($("cb_lugar"), { placeholder:"(seleccionar)", options: lugares, allowCustom:false });
+    COMBOS.meta_tipo ??= createCombo($("cb_tipo_indicador"), { placeholder:"(seleccionar)", options: metaTipos, allowCustom:false });
+
+    COMBOS.prod_tipo ??= createCombo($("cb_produccion_tipo"), { placeholder:"(seleccionar)", options: prodTipoOpts, allowCustom:false });
+
+    COMBOS.ente1 ??= createCombo($("cb_ente1"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
+    COMBOS.ente2 ??= createCombo($("cb_ente2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
+    COMBOS.ente3 ??= createCombo($("cb_ente3"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
+
+    COMBOS.area1 ??= createCombo($("cb_area1"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
+    COMBOS.area2 ??= createCombo($("cb_area2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
+    COMBOS.area3 ??= createCombo($("cb_area3"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
+
+    COMBOS.territorio ??= createCombo($("cb_territorio"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
+    COMBOS.contratacion ??= createCombo($("cb_contratacion"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
+
+    COMBOS.part_ent ??= createCombo($("cb_part_ent"), { placeholder:"Buscar…", options: [], allowCustom:true });
+    COMBOS.part_per ??= createCombo($("cb_part_per"), { placeholder:"Buscar…", options: [], allowCustom:true });
+
+    COMBOS.ent_status ??= createCombo($("cb_ent_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
+    COMBOS.per_status ??= createCombo($("cb_per_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
+
+    COMBOS.estado_accion.setOptions(estadoAccion.map(x=>({value:String(x).toUpperCase(), label:String(x).toUpperCase()})));
+    COMBOS.tipo_accion.setOptions(tiposAccion);
+    COMBOS.eje.setOptions(ejes);
+    COMBOS.lineaTematica.setOptions(lineaTematica);
+    COMBOS.lugar.setOptions(lugares);
+    COMBOS.meta_tipo.setOptions(metaTipos);
+    COMBOS.prod_tipo.setOptions(prodTipoOpts);
+
+    refreshOrganizerOptions();
+    refreshParticipantOptions();
+
+    COMBOS.ent_status.setOptions(pstOpts);
+    COMBOS.per_status.setOptions(pstOpts);
+    COMBOS.ent_status.setValue(pst[0] || "A invitar");
+    COMBOS.per_status.setValue(pst[0] || "A invitar");
+  }
+
+  function buildCreateControls(){
+    const estadoAccion = getValList(["estadoAccion","estado_accion","Estado Accion","EstadoAccion"], ["IDEA","DESARROLLO","REALIZADO","CANCELADO"]);
+    const tiposAccion = getValList(["tiposaccion","tipo_accion","tipoaccion","TiposAccion"], []);
+    const ejes = getValList(["ejes","eje","Ejes"], []);
+    const lineaTematica = getValList(["lineaTematica","LineaTematica","lineatematica","subeje","Subeje"], []);
+    const lugares = getValList(["territorios","territorio","lugar","lugares","Territorios","Lugar"],[] );
+    const metaTipos = getValList(["metatipos","meta_tipo","metatipo","metaTipo","MetaTipos"], []);
+
+    const pst = (PARTICIPANT_STATES && PARTICIPANT_STATES.length)
+      ? PARTICIPANT_STATES
+      : ["A invitar","Invitado","Confirmado","Participó","No participó","Cancelado"];
+    const pstOpts = pst.map(s=>({ value:s, label:s, tag:"" }));
+
+    const prodTipoOpts = [
+      { value:"CONJUNTA", label:"CONJUNTA", tag:"" },
+      { value:"GCBA", label:"GCBA", tag:"" },
+      { value:"ENTE", label:"ENTE", tag:"" },
+    ];
+
+    const siNoOpts = [
+      { value:"", label:"(seleccionar)" },
+      { value:"SI", label:"SI" },
+      { value:"NO", label:"NO" },
+    ];
+
+    CCOMBOS.estado_accion ??= createCombo($("c_cb_estado_accion"), {
+      placeholder:"(seleccionar)",
+      options: estadoAccion.map(x=>({value:String(x).toUpperCase(), label:String(x).toUpperCase()})),
+      allowCustom:false,
+      onChange: () => applyCreateStateRules()
+    });
+
+    CCOMBOS.tipo_accion ??= createCombo($("c_cb_tipo_accion"), { placeholder:"(seleccionar)", options: tiposAccion, allowCustom:false });
+    CCOMBOS.eje ??= createCombo($("c_cb_eje"), { placeholder:"(seleccionar)", options: ejes, allowCustom:false });
+    CCOMBOS.lineaTematica ??= createCombo($("c_cb_linea_tematica"), { placeholder:"(seleccionar)", options: lineaTematica, allowCustom:false });
+    CCOMBOS.lugar ??= createCombo($("c_cb_lugar"), { placeholder:"(seleccionar)", options: lugares, allowCustom:false });
+    CCOMBOS.meta_tipo ??= createCombo($("c_cb_tipo_indicador"), { placeholder:"(seleccionar)", options: metaTipos, allowCustom:false });
+
+    CCOMBOS.prod_tipo ??= createCombo($("c_cb_produccion_tipo"), { placeholder:"(seleccionar)", options: prodTipoOpts, allowCustom:false });
+
+    CCOMBOS.ente1 ??= createCombo($("c_cb_ente1"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
+    CCOMBOS.ente2 ??= createCombo($("c_cb_ente2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
+    CCOMBOS.ente3 ??= createCombo($("c_cb_ente3"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
+
+    CCOMBOS.area1 ??= createCombo($("c_cb_area1"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
+    CCOMBOS.area2 ??= createCombo($("c_cb_area2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
+    CCOMBOS.area3 ??= createCombo($("c_cb_area3"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
+
+    CCOMBOS.territorio ??= createCombo($("c_cb_territorio"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
+    CCOMBOS.contratacion ??= createCombo($("c_cb_contratacion"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
+
+    CCOMBOS.part_ent ??= createCombo($("c_cb_part_ent"), { placeholder:"Buscar…", options: [], allowCustom:true });
+    CCOMBOS.part_per ??= createCombo($("c_cb_part_per"), { placeholder:"Buscar…", options: [], allowCustom:true });
+
+    CCOMBOS.ent_status ??= createCombo($("c_cb_ent_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
+    CCOMBOS.per_status ??= createCombo($("c_cb_per_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
+
+    refreshCreateOrganizerOptions();
+    refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+
+    CCOMBOS.ent_status.setValue(pst[0] || "A invitar");
+    CCOMBOS.per_status.setValue(pst[0] || "A invitar");
+  }
+
+  function bindParticipantButtons(){
+    const bEnt = $("ent_add");
+    const bPer = $("per_add");
+    if (bEnt){
+      bEnt.addEventListener("click", ()=>{
+        const sel = COMBOS.part_ent.getSelection();
+        const st = COMBOS.ent_status.getSelection().value || "A invitar";
+
+        if (sel.meta && sel.meta.id){
+          const item = { type: sel.meta.type, id: sel.meta.id, name: sel.meta.name, invState: st };
+          if (entItems.some(x => x.id && x.id === item.id)) { COMBOS.part_ent.clear(); return; }
+          entItems.push(item);
+        } else {
+          const name = sel.value || sel.label || sel.typed || "";
+          if (!name) return;
+          const item = { type: "Entidad/Área (manual)", id: "", name, invState: st };
+          if (entItems.some(x => !x.id && x.name.toLowerCase() === name.toLowerCase())) { COMBOS.part_ent.clear(); return; }
+          entItems.push(item);
+        }
+
+        COMBOS.part_ent.clear();
+        renderChips("ent_chips", entItems, "ent");
+        refreshParticipantOptions();
+      });
+    }
+
+    if (bPer){
+      bPer.addEventListener("click", ()=>{
+        const sel = COMBOS.part_per.getSelection();
+        const st = COMBOS.per_status.getSelection().value || "A invitar";
+
+        if (sel.meta && sel.meta.id){
+          const item = { type: "Persona", id: sel.meta.id, name: sel.meta.name, invState: st };
+          if (perItems.some(x => x.id && x.id === item.id)) { COMBOS.part_per.clear(); return; }
+          perItems.push(item);
+        } else {
+          const name = sel.value || sel.label || sel.typed || "";
+          if (!name) return;
+          const item = { type:"Persona (manual)", id:"", name, invState: st };
+          if (perItems.some(x => !x.id && x.name.toLowerCase() === name.toLowerCase())) { COMBOS.part_per.clear(); return; }
+          perItems.push(item);
+        }
+
+        COMBOS.part_per.clear();
+        renderChips("per_chips", perItems, "per");
+        refreshParticipantOptions();
+      });
+    }
+  }
+
+  function bindCreateParticipantButtons(){
+    const bEnt = $("c_ent_add");
+    const bPer = $("c_per_add");
+
+    if (bEnt){
+      bEnt.addEventListener("click", ()=>{
+        const sel = CCOMBOS.part_ent.getSelection();
+        const st = CCOMBOS.ent_status.getSelection().value || "A invitar";
+
+        if (sel.meta && sel.meta.id){
+          const item = { type: sel.meta.type, id: sel.meta.id, name: sel.meta.name, invState: st };
+          if (cEntItems.some(x => x.id && x.id === item.id)) { CCOMBOS.part_ent.clear(); return; }
+          cEntItems.push(item);
+        } else {
+          const name = sel.value || sel.label || sel.typed || "";
+          if (!name) return;
+          const item = { type: "Entidad/Área (manual)", id: "", name, invState: st };
+          if (cEntItems.some(x => !x.id && x.name.toLowerCase() === name.toLowerCase())) { CCOMBOS.part_ent.clear(); return; }
+          cEntItems.push(item);
+        }
+
+        CCOMBOS.part_ent.clear();
+        renderChips("c_ent_chips", cEntItems, "ent", (idx)=>{
+          cEntItems.splice(idx,1);
+          refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+        });
+        refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+      });
+    }
+
+    if (bPer){
+      bPer.addEventListener("click", ()=>{
+        const sel = CCOMBOS.part_per.getSelection();
+        const st = CCOMBOS.per_status.getSelection().value || "A invitar";
+
+        if (sel.meta && sel.meta.id){
+          const item = { type: "Persona", id: sel.meta.id, name: sel.meta.name, invState: st };
+          if (cPerItems.some(x => x.id && x.id === item.id)) { CCOMBOS.part_per.clear(); return; }
+          cPerItems.push(item);
+        } else {
+          const name = sel.value || sel.label || sel.typed || "";
+          if (!name) return;
+          const item = { type:"Persona (manual)", id:"", name, invState: st };
+          if (cPerItems.some(x => !x.id && x.name.toLowerCase() === name.toLowerCase())) { CCOMBOS.part_per.clear(); return; }
+          cPerItems.push(item);
+        }
+
+        CCOMBOS.part_per.clear();
+        renderChips("c_per_chips", cPerItems, "per", (idx)=>{
+          cPerItems.splice(idx,1);
+          refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+        });
+        refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+      });
+    }
+  }
+
+  function openEdit(row){
+    EDIT_ROW = row;
+
+    $("editTitle").textContent = `Editar • ${row.nombre_accion || row.id_accion || ""}`;
+    $("editHint").textContent = `ID: ${row.id_accion} • Fila: ${row.rowNumber}`;
+
+    $("f_nombre_accion").value = row.nombre_accion || "";
+
+const iso = String(row.fecha_accion || "").trim();
+if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
+
+
+    const st = String(row.estado_accion || "").toUpperCase();
+    COMBOS.estado_accion?.setValue(st);
+
+    COMBOS.tipo_accion?.setValue(row.tipo_accion || "");
+    // ✅ compat: si viene "subeje" de backend viejo, lo tomamos igual
+    COMBOS.lineaTematica?.setValue(row.lineaTematica || row.subeje || "");
+    COMBOS.prod_tipo?.setValue(String(row.produccion || "").toUpperCase());
+    COMBOS.eje?.setValue(row.eje || "");
+
+    COMBOS.ente1?.setValue(row.ente_org_1_id || "");
+    COMBOS.ente2?.setValue(row.ente_org_2_id || "");
+    COMBOS.ente3?.setValue(row.ente_org_3_id || "");
+
+    COMBOS.area1?.setValue(row.area_gcba_org_1_id || "");
+    COMBOS.area2?.setValue(row.area_gcba_org_2_id || "");
+    COMBOS.area3?.setValue(row.area_gcba_org_3_id || "");
+
+    refreshOrganizerOptions();
+
+    COMBOS.lugar?.setValue(row.lugar || "");
+    COMBOS.territorio?.setValue(row.territorio || "");
+    COMBOS.contratacion?.setValue(row.contratacion_personal || "");
+
+    COMBOS.meta_tipo?.setValue(row.meta_tipo || "");
+    $("f_impacto_numerico").value = (row.impacto_numerico ?? "") === "" ? "" : String(row.impacto_numerico);
+    $("f_comentarios").value = row.comentarios || "";
+
+    entItems = parseJsonArray(row.participantes_entidad_json).map(normalizeParticipant);
+    perItems = parseJsonArray(row.participantes_persona_json).map(normalizeParticipant);
+
+    renderChips("ent_chips", entItems, "ent");
+    renderChips("per_chips", perItems, "per");
+    refreshParticipantOptions();
+
+    $("editBack").style.display = "flex";
+  }
+
+  function closeEdit(){
+    $("editBack").style.display = "none";
+    EDIT_ROW = null;
+    entItems = [];
+    perItems = [];
+  }
+
+ function collectEditPayload(){
+  const isoAccion = String($("f_fecha_accion_iso")?.value || "").trim();
+  if (!isoAccion) throw new Error("Fecha de acción es obligatoria.");
+
+  const rawImp = String($("f_impacto_numerico")?.value ?? "").trim();
+  if (rawImp && isNaN(Number(rawImp))) throw new Error("Impacto numérico inválido. Solo números.");
+
+  const prodSel = COMBOS.prod_tipo?.getSelection().value || "";
+  const prodUpper = String(prodSel || "").toUpperCase();
+
+  const lt = COMBOS.lineaTematica?.getSelection().value || "";
+
+  return {
+    fecha_accion: isoAccion,
+    estado_accion: (COMBOS.estado_accion?.getSelection().value || "").toUpperCase(),
+
+    tipo_accion: COMBOS.tipo_accion?.getSelection().value || "",
+    eje: COMBOS.eje?.getSelection().value || "",
+
+    lineaTematica: lt,
+    subeje: lt,
+
+    produccion: prodUpper,
+
+    area_gcba_org_1_id: COMBOS.area1?.getSelection().value || "",
+    area_gcba_org_2_id: COMBOS.area2?.getSelection().value || "",
+    area_gcba_org_3_id: COMBOS.area3?.getSelection().value || "",
+
+    ente_org_1_id: COMBOS.ente1?.getSelection().value || "",
+    ente_org_2_id: COMBOS.ente2?.getSelection().value || "",
+    ente_org_3_id: COMBOS.ente3?.getSelection().value || "",
+
+    lugar: COMBOS.lugar?.getSelection().value || "",
+    territorio: COMBOS.territorio?.getSelection().value || "",
+    contratacion_personal: COMBOS.contratacion?.getSelection().value || "",
+
+    meta_tipo: COMBOS.meta_tipo?.getSelection().value || "",
+
+    participantes_entidad_json: JSON.stringify(entItems, null, 0),
+    participantes_persona_json: JSON.stringify(perItems, null, 0),
+
+    impacto_numerico: rawImp,
+    comentarios: $("f_comentarios")?.value || "",
+  };
+}
+
+  function saveEdit(){
+    if (!EDIT_ROW) return;
+
+    let payload;
+    try{
+      payload = collectEditPayload();
+    }catch(e){
+      alert(e.message || e);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(()=>{
+        closeEdit();
+        loadData();
+      })
+      .withFailureHandler((err)=>{
+        alert("Error guardando: " + (err?.message || err));
+      })
+      .updateAccion(EDIT_ROW.rowNumber, payload);
+  }
+
+  // =========================
+  // ✅ CREATE logic
+  // =========================
+  function openCreate({ switchTab = true } = {}){
+if ($("c_nombre_accion")) $("c_nombre_accion").value = "";
+if ($("c_fecha_accion_iso")) $("c_fecha_accion_iso").value = "";
+if ($("c_fecha_accion_dmy")) $("c_fecha_accion_dmy").value = "";
+if ($("c_impacto_numerico")) $("c_impacto_numerico").value = "";
+if ($("c_comentarios")) $("c_comentarios").value = "";
+
+
+
+    cEntItems = [];
+    cPerItems = [];
+    renderChips("c_ent_chips", cEntItems, "ent", ()=>{});
+    renderChips("c_per_chips", cPerItems, "per", ()=>{});
+    refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+
+    // defaults
+    CCOMBOS.estado_accion?.setValue("IDEA");
+    CCOMBOS.tipo_accion?.clear();
+    CCOMBOS.lineaTematica?.clear();
+    CCOMBOS.prod_tipo?.setValue("CONJUNTA");
+    CCOMBOS.eje?.clear();
+
+    CCOMBOS.ente1?.clear(); CCOMBOS.ente2?.clear(); CCOMBOS.ente3?.clear();
+    CCOMBOS.area1?.clear(); CCOMBOS.area2?.clear(); CCOMBOS.area3?.clear();
+
+    refreshCreateOrganizerOptions();
+
+    CCOMBOS.lugar?.clear();
+    CCOMBOS.territorio?.setValue("");
+    CCOMBOS.contratacion?.setValue("");
+
+    CCOMBOS.meta_tipo?.clear();
+
+    applyCreateStateRules();
+
+    if (switchTab) setTab("carga");
+  }
+
+  function closeCreate(){
+    setTab("acciones");
+  }
+
+  function applyCreateStateRules(){
+    const st = String(CCOMBOS.estado_accion?.getSelection().value || "").toUpperCase();
+
+    const showLogPart = (st === "DESARROLLO" || st === "REALIZADO");
+    const showImpact = (st === "REALIZADO");
+
+    setSectionEnabled("c_sec_log", showLogPart);
+    setSectionEnabled("c_sec_part", showLogPart);
+    setSectionEnabled("c_sec_imp", showImpact);
+
+    if (!showLogPart){
+      CCOMBOS.lugar?.clear();
+      CCOMBOS.territorio?.setValue("");
+      CCOMBOS.contratacion?.setValue("");
+      cEntItems = [];
+      cPerItems = [];
+      renderChips("c_ent_chips", cEntItems, "ent", ()=>{});
+      renderChips("c_per_chips", cPerItems, "per", ()=>{});
+      refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
+    }
+    if (!showImpact){
+      CCOMBOS.meta_tipo?.clear();
+      $("c_impacto_numerico").value = "";
+      $("c_comentarios").value = "";
+    }
+  }
+
+  function setSectionEnabled(sectionId, enabled){
+    const sec = $(sectionId);
+    if (!sec) return;
+
+    sec.style.display = enabled ? "" : "none";
+    sec.classList.toggle("sectionDisabled", !enabled);
+
+    if (sectionId === "c_sec_log"){
+      CCOMBOS.lugar?.setDisabled(!enabled);
+      CCOMBOS.territorio?.setDisabled(!enabled);
+      CCOMBOS.contratacion?.setDisabled(!enabled);
+    }
+    if (sectionId === "c_sec_part"){
+      CCOMBOS.part_ent?.setDisabled(!enabled);
+      CCOMBOS.part_per?.setDisabled(!enabled);
+      CCOMBOS.ent_status?.setDisabled(!enabled);
+      CCOMBOS.per_status?.setDisabled(!enabled);
+      if ($("c_ent_add")) $("c_ent_add").disabled = !enabled;
+      if ($("c_per_add")) $("c_per_add").disabled = !enabled;
+    }
+    if (sectionId === "c_sec_imp"){
+      CCOMBOS.meta_tipo?.setDisabled(!enabled);
+      if ($("c_impacto_numerico")) $("c_impacto_numerico").disabled = !enabled;
+      if ($("c_comentarios")) $("c_comentarios").disabled = !enabled;
+    }
+  }
+
+function collectCreatePayload(){
+  const nombre = String($("c_nombre_accion")?.value || "").trim();
+  if (!nombre) throw new Error("Nombre de la acción es obligatorio.");
+
+  const isoAccion = String($("c_fecha_accion_iso")?.value || "").trim();
+  if (!isoAccion) throw new Error("Fecha de acción es obligatoria.");
+
+  const estado = String(CCOMBOS.estado_accion?.getSelection().value || "").toUpperCase();
+  if (!estado) throw new Error("Estado de acción es obligatorio.");
+
+  const tipoAcc = String(CCOMBOS.tipo_accion?.getSelection().value || "").trim();
+  if (!tipoAcc) throw new Error("Tipo de acción es obligatorio.");
+
+  const prodUpper = String(CCOMBOS.prod_tipo?.getSelection().value || "").toUpperCase();
+
+  const showLogPart = (estado === "DESARROLLO" || estado === "REALIZADO");
+  const showImpact = (estado === "REALIZADO");
+
+  const rawImp = String($("c_impacto_numerico")?.value ?? "").trim();
+  if (showImpact && rawImp && isNaN(Number(rawImp))) throw new Error("Impacto numérico inválido. Solo números.");
+
+  const lt = CCOMBOS.lineaTematica?.getSelection().value || "";
+
+  return {
+    nombre_accion: nombre,
+    fecha_accion: isoAccion,
+    estado_accion: estado,
+    tipo_accion: tipoAcc,
+
+    eje: CCOMBOS.eje?.getSelection().value || "",
+
+    lineaTematica: lt,
+    subeje: lt,
+
+    produccion: prodUpper || "",
+
+    area_gcba_org_1_id: CCOMBOS.area1?.getSelection().value || "",
+    area_gcba_org_2_id: CCOMBOS.area2?.getSelection().value || "",
+    area_gcba_org_3_id: CCOMBOS.area3?.getSelection().value || "",
+    ente_org_1_id: CCOMBOS.ente1?.getSelection().value || "",
+    ente_org_2_id: CCOMBOS.ente2?.getSelection().value || "",
+    ente_org_3_id: CCOMBOS.ente3?.getSelection().value || "",
+
+    lugar: showLogPart ? (CCOMBOS.lugar?.getSelection().value || "") : "",
+    territorio: showLogPart ? (CCOMBOS.territorio?.getSelection().value || "") : "",
+    contratacion_personal: showLogPart ? (CCOMBOS.contratacion?.getSelection().value || "") : "",
+    participantes_entidad_json: showLogPart ? JSON.stringify(cEntItems, null, 0) : "[]",
+    participantes_persona_json: showLogPart ? JSON.stringify(cPerItems, null, 0) : "[]",
+
+    meta_tipo: showImpact ? (CCOMBOS.meta_tipo?.getSelection().value || "") : "",
+    impacto_numerico: showImpact ? rawImp : "",
+    comentarios: showImpact ? ($("c_comentarios")?.value || "") : "",
+  };
+}
+
+  function saveCreate(){
+    let payload;
+    try{
+      payload = collectCreatePayload();
+    }catch(e){
+      alert(e.message || e);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(()=>{
+        closeCreate();
+        loadData();
+      })
+      .withFailureHandler((err)=>{
+        alert("Error creando: " + (err?.message || err));
+      })
+      .createAccion(payload);
+  }
+
+  // =========================
+  // Admin UI
+  // =========================
+function adminSetStatus(msg, kind="ok"){
+  if ($("admRight")) $("admRight").textContent = msg || "—";
+  if ($("admLeft")){
+    $("admLeft").textContent = (kind === "bad") ? "Carga de Entidades • Error" : "Carga de Entidades lista";
+    $("admLeft").style.borderColor = (kind === "bad") ? "rgba(239,68,68,.35)" : "rgba(141,226,214,.22)";
+    $("admLeft").style.color = (kind === "bad") ? "rgba(239,68,68,.95)" : "rgba(21,50,68,.92)";
+  }
+}
+
+
+  function prettyCampoLabel(k){
+    const s = String(k || "").trim();
+    if (!s) return "";
+
+    // 1) Mapa explícito
+    const MAP = {
+      EstadosAccion: "Estados Acción",
+      EstadosInvitacion: "Estados Invitación",
+      Produccion: "Producción",
+      ContratacionPersonal: "Contratación Personal",
+      Lugar: "Lugar",
+      TiposAccion: "Tipos de Acción",
+      Ejes: "Ejes",
+      lineaTematica: "Línea Temática",
+      MetaTipos: "Tipos de Indicador",
+      Territorios: "Territorios",
+    };
+    if (MAP[s]) return MAP[s];
+
+    // 2) Fallback genérico
+    const spaced = s
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+function prettyEntHeader(k){
+  const s = String(k || "").trim();
+  const MAP = {
+    // Entidades privadas
+    ente_id: "ID Entidad",
+    ente_nombre: "Entidad",
+    web: "Web",
+    direccion: "Dirección",
+    sector: "Sector",
+    rubro: "Rubro",
+    zona_cobertura: "Cobertura",
+    zona_comuna: "Comuna",
+    estado_contacto: "Estado contacto",
+    red_discapacidad: "Red discapacidad",
+    observaciones: "Observaciones",
+    activo: "Activo",
+
+    // Personas
+    persona_id: "ID Persona",
+    apellido: "Apellido",
+    nombre: "Nombre",
+    mail: "Mail",
+    telefono: "Teléfono",
+    dni: "DNI",
+    rol: "Rol",
+    area_id: "Área (ID)",
+    area_nombre: "Área",
+    gcba: "GCBA",
+
+    // Áreas
+    area_gcba_id: "ID Área",
+    area_nombre: "Área GCBA",
+  };
+
+  if (MAP[s]) return MAP[s];
+
+  // fallback: separa camelCase/guiones/underscores
+  const spaced = s
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// ✅ llena selects de filtro según el tipo (solo para entidades privadas)
+function buildEntidadesFilterOptions(kind, rows){
+  // si no existen en el HTML, no hace nada
+  const elSector = $("entSector");
+  const elRubro  = $("entRubro");
+  const elComuna = $("entComuna");
+  if (!elSector && !elRubro && !elComuna) return;
+
+  // solo aplican a entidades privadas
+  const isPriv = (String(kind) === "entidad_privada");
+  if (!isPriv){
+    if (elSector) elSector.innerHTML = `<option value="">(todos)</option>`;
+    if (elRubro)  elRubro.innerHTML  = `<option value="">(todos)</option>`;
+    if (elComuna) elComuna.innerHTML = `<option value="">(todos)</option>`;
+    // opcional: ocultarlos si querés (depende tu HTML)
+    return;
+  }
+
+  const uniq = (arr)=> Array.from(new Set(arr.map(x=>String(x||"").trim()).filter(Boolean)))
+    .sort((a,b)=> a.localeCompare(b, "es", { sensitivity:"base" }));
+
+  const sectors = uniq(rows.map(r=> r.sector));
+  const rubros  = uniq(rows.map(r=> r.rubro));
+  const comunas = uniq(rows.map(r=> r.zona_comuna ?? r.comuna));
+
+  if (elSector){
+    const keep = String(elSector.value || "").trim();
+    elSector.innerHTML = `<option value="">(todos)</option>` + sectors.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    elSector.value = sectors.includes(keep) ? keep : "";
+  }
+  if (elRubro){
+    const keep = String(elRubro.value || "").trim();
+    elRubro.innerHTML = `<option value="">(todos)</option>` + rubros.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    elRubro.value = rubros.includes(keep) ? keep : "";
+  }
+  if (elComuna){
+    const keep = String(elComuna.value || "").trim();
+    elComuna.innerHTML = `<option value="">(todos)</option>` + comunas.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    elComuna.value = comunas.includes(keep) ? keep : "";
+  }
+}
+
+  // ✅ Admin: campos FIJOS tomados de la hoja VALIDACIONES (columna "campo")
+  function adminBuildCampoOptions(){
+    const keys = Object.keys(VALIDATIONS || {})
+      .filter(k => Array.isArray(VALIDATIONS[k])); // solo campos reales
+
+    const seen = new Set();
+    const out = [];
+
+    keys.forEach(k=>{
+      const nk = normKey(k);
+      if (seen.has(nk)) return;
+      seen.add(nk);
+      out.push({ value: k, label: k });
+    });
+
+    out.sort((a,b)=> String(a.label).localeCompare(String(b.label), "es", { sensitivity:"base" }));
+    return out;
+  }
+
+  function adminCampoIsAllowed(campo){
+    const c = String(campo || "").trim();
+    if (!c) return false;
+
+    const opts = adminBuildCampoOptions();
+    if (opts.some(o => o.value === c)) return true;
+
+    const nk = normKey(c);
+    return opts.some(o => normKey(o.value) === nk);
+  }
+
+  function buildAdminControls(){
+    ACOMBOS.campo ??= createCombo($("adm_cb_campo"), {
+      placeholder:"(seleccionar campo)",
+      options: adminBuildCampoOptions(),
+      allowCustom: false,
+      readOnlyInput: true,
+      showClear: false,
+      showHeader: false,
+      onChange: () => {
+        if (adminGetModule() === "validaciones") adminPreviewValidaciones();
+      }
+    });
+
+    ACOMBOS.area_id ??= createCombo($("adm_cb_area_id"), {
+      placeholder:"(opcional)",
+      options: buildAreasOpts(),
+      allowCustom: false,
+    });
+
+    const campoDefault = adminBuildCampoOptions()[0]?.value || "";
+    if (campoDefault) ACOMBOS.campo.setValue(campoDefault);
+
+    ACOMBOS.area_id.clear();
+  }
+
+  function renderMiniList(elId, items){
+    const box = $(elId);
+    if (!box) return;
+
+    if (!items || !items.length){
+      box.innerHTML = `<div class="muted">—</div>`;
+      return;
+    }
+
+    box.innerHTML = items.map((x)=>{
+      if (typeof x === "string"){
+        return `<div class="adminRow">
+          <div class="id">•</div>
+          <div class="name">${escapeHtml(x)}</div>
+        </div>`;
+      }
+
+      const id = String(x.id || "").trim();
+      const name = String(x.name || x.ente_nombre || x.area_nombre || "").trim();
+
+      return `<div class="adminRow">
+        <div class="id">${escapeHtml(id || "—")}</div>
+        <div class="name" title="${escapeHtml(name || id)}">${escapeHtml(name || id || "—")}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function adminPreviewValidaciones(){
+    const campo = (ACOMBOS.campo?.getSelection().value || "").trim();
+    if (!campo) { alert("Campo vacío."); return; }
+    if (!adminCampoIsAllowed(campo)) { alert("Campo inválido (no permitido)."); return; }
+
+    $("adm_valid_meta").textContent = "Cargando…";
+    $("adm_valid_list").innerHTML = `<div class="muted">Cargando…</div>`;
+
+    google.script.run
+      .withSuccessHandler((list)=>{
+        const arr = Array.isArray(list) ? list : [];
+        $("adm_valid_meta").textContent = `${arr.length} ítems`;
+        renderMiniList("adm_valid_list", arr.map(String));
+        adminSetStatus("Preview validaciones OK");
+      })
+      .withFailureHandler((err)=>{
+        $("adm_valid_meta").textContent = "Error";
+        $("adm_valid_list").innerHTML = `<div class="muted">Error: ${escapeHtml(err?.message || err)}</div>`;
+        adminSetStatus("Error preview validaciones", "bad");
+      })
+      .adminPreviewValidaciones(campo, 60);
+  }
+
+  function adminAddValidacion(){
+    const campo = (ACOMBOS.campo?.getSelection().value || "").trim();
+    const valor = String($("adm_valor").value || "").trim();
+    if (!campo) { alert("Campo vacío."); return; }
+    if (!adminCampoIsAllowed(campo)) { alert("Campo inválido (no permitido)."); return; }
+    if (!valor) { alert("Valor vacío."); return; }
+
+    adminSetStatus("Agregando validación…");
+    google.script.run
+      .withSuccessHandler((res)=>{
+        $("adm_valor").value = "";
+        adminSetStatus(res?.message || "Agregado OK");
+        loadBootstrap(true);
+        setTimeout(()=>adminPreviewValidaciones(), 300);
+      })
+      .withFailureHandler((err)=>{
+        adminSetStatus("Error agregando validación", "bad");
+        alert("Error: " + (err?.message || err));
+      })
+      .addValidationValue(campo, valor);
+  }
+
+  function adminPreviewAreas(){
+    $("adm_areas_meta").textContent = "Cargando…";
+    $("adm_areas_list").innerHTML = `<div class="muted">Cargando…</div>`;
+
+    google.script.run
+      .withSuccessHandler((list)=>{
+        const arr = Array.isArray(list) ? list : [];
+        $("adm_areas_meta").textContent = `${arr.length} ítems`;
+        renderMiniList("adm_areas_list", arr);
+        adminSetStatus("Preview áreas OK");
+      })
+      .withFailureHandler((err)=>{
+        $("adm_areas_meta").textContent = "Error";
+        $("adm_areas_list").innerHTML = `<div class="muted">Error: ${escapeHtml(err?.message || err)}</div>`;
+        adminSetStatus("Error preview áreas", "bad");
+      })
+      .adminPreviewAreas(60);
+  }
+
+  function adminCreateArea(){
+    const name = String($("adm_area_nombre").value || "").trim();
+    if (name.length < 3) { alert("Nombre muy corto (mín 3)."); return; }
+
+    adminSetStatus("Creando área…");
+    google.script.run
+      .withSuccessHandler((res)=>{
+        $("adm_area_nombre").value = "";
+        adminSetStatus(res?.message || (res?.created ? "Área creada" : "Área ya existía"));
+        loadBootstrap(true);
+        setTimeout(()=>adminPreviewAreas(), 300);
+      })
+      .withFailureHandler((err)=>{
+        adminSetStatus("Error creando área", "bad");
+        alert("Error: " + (err?.message || err));
+      })
+      .createAreaGCBA(name);
+  }
+
+  function adminPreviewEntes(){
+    $("adm_entes_meta").textContent = "Cargando…";
+    $("adm_entes_list").innerHTML = `<div class="muted">Cargando…</div>`;
+
+    google.script.run
+      .withSuccessHandler((list)=>{
+        const arr = Array.isArray(list) ? list : [];
+        $("adm_entes_meta").textContent = `${arr.length} ítems`;
+        renderMiniList("adm_entes_list", arr);
+        adminSetStatus("Preview entes OK");
+      })
+      .withFailureHandler((err)=>{
+        $("adm_entes_meta").textContent = "Error";
+        $("adm_entes_list").innerHTML = `<div class="muted">Error: ${escapeHtml(err?.message || err)}</div>`;
+        adminSetStatus("Error preview entes", "bad");
+      })
+      .adminPreviewEntes(60);
+  }
+
+  function adminPreviewPersonas(){
+    $("adm_personas_meta").textContent = "Cargando…";
+    $("adm_personas_list").innerHTML = `<div class="muted">Cargando…</div>`;
+
+    google.script.run
+      .withSuccessHandler((list)=>{
+        const arr = Array.isArray(list) ? list : [];
+        $("adm_personas_meta").textContent = `${arr.length} ítems`;
+        renderMiniList("adm_personas_list", arr);
+        adminSetStatus("Preview personas OK");
+      })
+      .withFailureHandler((err)=>{
+        $("adm_personas_meta").textContent = "Error";
+        $("adm_personas_list").innerHTML = `<div class="muted">Error: ${escapeHtml(err?.message || err)}</div>`;
+        adminSetStatus("Error preview personas", "bad");
+      })
+      .adminPreviewPersonas(60);
+  }
+
+  function adminCreateEnte(){
+    const ente_nombre = String($("adm_ente_nombre").value || "").trim();
+    if (ente_nombre.length < 3) { alert("Nombre de ente muy corto (mín 3)."); return; }
+
+    const payload = {
+      ente_nombre,
+      sector: String($("adm_ente_sector").value || "").trim(),
+      rubro: String($("adm_ente_rubro").value || "").trim(),
+      web: String($("adm_ente_web").value || "").trim(),
+      direccion: String($("adm_ente_dir").value || "").trim(),
+      red_discapacidad: String($("adm_ente_red").value || "").trim(),
+      observaciones: String($("adm_ente_obs").value || "").trim(),
+      activo: String($("adm_ente_activo")?.value || "SI").trim() || "SI",
+    };
+
+    adminSetStatus("Creando ente…");
+    google.script.run
+      .withSuccessHandler((res)=>{
+        if (res?.created){
+          $("adm_ente_nombre").value = "";
+          $("adm_ente_sector").value = "";
+          $("adm_ente_rubro").value = "";
+          $("adm_ente_web").value = "";
+          $("adm_ente_dir").value = "";
+          $("adm_ente_red").value = "";
+          $("adm_ente_obs").value = "";
+        }
+        adminSetStatus(res?.message || (res?.created ? "Ente creado" : "Ente ya existía"));
+        loadBootstrap(true);
+        setTimeout(()=>adminPreviewEntes(), 300);
+      })
+      .withFailureHandler((err)=>{
+        adminSetStatus("Error creando ente", "bad");
+        alert("Error: " + (err?.message || err));
+      })
+      .createEntePrivado(payload);
+  }
+
+  function adminCreatePersona(){
+    const apellido = String($("adm_per_apellido").value || "").trim();
+    const nombre = String($("adm_per_nombre").value || "").trim();
+    if (apellido.length < 2 || nombre.length < 2) { alert("Apellido y nombre son obligatorios (mín 2)."); return; }
+
+    const person = {
+      apellido,
+      nombre,
+      dni: String($("adm_per_dni").value || "").trim(),
+      mail: String($("adm_per_mail").value || "").trim(),
+      telefono: String($("adm_per_tel").value || "").trim(),
+      area_id: ACOMBOS.area_id?.getSelection().value || "",
+      rol: String($("adm_per_rol").value || "").trim(),
+      activo: "SI",
+    };
+
+    adminSetStatus("Creando persona…");
+    if ($("adm_persona_hint")) $("adm_persona_hint").textContent = "Cargando…";
+
+    google.script.run
+      .withSuccessHandler((res)=>{
+        if ($("adm_persona_hint")) $("adm_persona_hint").textContent = res?.message || (res?.created ? "Persona creada" : "No se creó (duplicado)");
+        adminSetStatus("Persona OK");
+        if (res?.created){
+          $("adm_per_apellido").value = "";
+          $("adm_per_nombre").value = "";
+          $("adm_per_dni").value = "";
+          $("adm_per_mail").value = "";
+          $("adm_per_tel").value = "";
+          $("adm_per_rol").value = "";
+          ACOMBOS.area_id?.clear();
+        }
+        loadBootstrap(true);
+      })
+      .withFailureHandler((err)=>{
+        if ($("adm_persona_hint")) $("adm_persona_hint").textContent = "Error: " + (err?.message || err);
+        adminSetStatus("Error creando persona", "bad");
+      })
+      .createPersona(person);
+  }
+  // =========================
+  // ✅ Admin: Alta Entidad Privada + Contacto (nuevo)
+  // =========================
+
+  function buildComunasOpts(){
+    // Comunas 1..15 (estable)
+    const out = [{ value:"", label:"(seleccionar)" }];
+    for (let i=1; i<=15; i++){
+      out.push({ value:`Comuna ${i}`, label:`Comuna ${i}` });
+    }
+    return out;
+  }
+function buildSectorOpts(){
+  const arr = [
+    "Privado Empresa",
+    "Privado PYME",
+    "Emprendedor",
+    "Cámara",
+    "Persona Destacada",
+    "Tercer Sector",
+    "Consultora",
+    "Organismo público",
+    "Organismo internacional",
+    "Área GCBA",
+  ];
+  return [{ value:"", label:"(seleccionar)" }, ...arr.map(v=>({ value:v, label:v }))];
+}
+
+function buildRubroOpts(){
+  const arr = [
+    "Actividades Inmobiliarias y Empresariales",
+    "Agroindustria",
+    "Alimenticia y Bebidas",
+    "Comercio",
+    "Educación",
+    "Energía",
+    "Entretenimiento",
+    "Financiera",
+    "Hotelería y Gastronomía",
+    "Metalúrgica",
+    "Producción de Maquinaria y Equipos",
+    "Química y Petroququímica",
+    "Salud y Bienestar",
+    "Servicios de Consultoría",
+    "Servicios Profesionales",
+    "Social",
+    "Tecnología",
+    "Textil y Confecciones",
+    "Transporte, Almacenamiento y Comunicaciones",
+    "Otra",
+  ];
+  return [{ value:"", label:"(seleccionar)" }, ...arr.map(v=>({ value:v, label:v }))];
+}
+
+function buildZonaCoberturaOpts(){
+  // ✅ Pedido: Federal - CABA - AMBA - PBA
+  const arr = ["Federal","CABA","AMBA","PBA"];
+  return [{ value:"", label:"(seleccionar)" }, ...arr.map(v=>({ value:v, label:v }))];
+}
+
+function buildEstadoContactoOpts(){
+  const arr = ["En contacto","Sin contactar","Inactivo"];
+  return [{ value:"", label:"(seleccionar)" }, ...arr.map(v=>({ value:v, label:v }))];
+}
+
+function buildRedDiscapacidadOpts(){
+  const arr = ["Sí","No"];
+  return [{ value:"", label:"(seleccionar)" }, ...arr.map(v=>({ value:v, label:v }))];
+}
+
+function buildEntidadPrivadaControls(){
+  // ✅ Sector (combo)
+  ACOMBOS.ep_sector ??= createCombo($("ep_cb_sector"), {
+    placeholder:"(seleccionar)",
+    options: buildSectorOpts(),
+    allowCustom:false,
+  });
+
+  // ✅ Rubro (combo)
+  ACOMBOS.ep_rubro ??= createCombo($("ep_cb_rubro"), {
+    placeholder:"(seleccionar)",
+    options: buildRubroOpts(),
+    allowCustom:false,
+  });
+
+  // ✅ Zona cobertura (combo)
+  ACOMBOS.ep_zona_cobertura ??= createCombo($("ep_cb_zona_cobertura"), {
+    placeholder:"(seleccionar)",
+    options: buildZonaCoberturaOpts(),
+    allowCustom:false,
+  });
+
+  // ✅ Zona (comuna) (combo)
+  ACOMBOS.ep_zona_comuna ??= createCombo($("ep_cb_zona_comuna"), {
+    placeholder:"(seleccionar)",
+    options: buildComunasOpts(),
+    allowCustom:false,
+  });
+
+  // ✅ Estado de contacto (combo)
+  ACOMBOS.ep_estado_contacto ??= createCombo($("ep_cb_estado_contacto"), {
+    placeholder:"(seleccionar)",
+    options: buildEstadoContactoOpts(),
+    allowCustom:false,
+  });
+
+  // ✅ Red discapacidad (combo)
+  ACOMBOS.ep_red_discapacidad ??= createCombo($("ep_cb_red_discapacidad"), {
+    placeholder:"(seleccionar)",
+    options: buildRedDiscapacidadOpts(),
+    allowCustom:false,
+    onChange: () => {
+      // Si la entidad es "Sí", autocompleta en la persona. Si no, "No".
+      const rd = String(ACOMBOS.ep_red_discapacidad?.getSelection().value || "").trim();
+      if ($("ep_con_red_discapacidad")){
+        $("ep_con_red_discapacidad").value = (rd === "Sí") ? "Sí" : "No";
+      }
+    }
+  });
+
+  // defaults
+  if (!ACOMBOS.ep_zona_cobertura.getSelection().value) ACOMBOS.ep_zona_cobertura.setValue("CABA");
+  if (!ACOMBOS.ep_zona_comuna.getSelection().value) ACOMBOS.ep_zona_comuna.setValue("");
+  if (!ACOMBOS.ep_red_discapacidad.getSelection().value) ACOMBOS.ep_red_discapacidad.setValue("No");
+  if (!ACOMBOS.ep_estado_contacto.getSelection().value) ACOMBOS.ep_estado_contacto.setValue("Sin contactar");
+
+  // primer sync a persona
+  if ($("ep_con_red_discapacidad")) $("ep_con_red_discapacidad").value = "No";
+}
+function clearEntidadPrivadaForm(){
+  // Entidad
+  if ($("ep_ente_nombre")) $("ep_ente_nombre").value = "";
+  if ($("ep_web")) $("ep_web").value = "";
+  if ($("ep_direccion")) $("ep_direccion").value = "";
+  if ($("ep_observaciones")) $("ep_observaciones").value = "";
+
+  ACOMBOS.ep_sector?.setValue("");
+  ACOMBOS.ep_rubro?.setValue("");
+  ACOMBOS.ep_zona_cobertura?.setValue("CABA");
+  ACOMBOS.ep_zona_comuna?.setValue("");
+  ACOMBOS.ep_estado_contacto?.setValue("Sin contactar");
+  ACOMBOS.ep_red_discapacidad?.setValue("No");
+
+  // Persona (contacto)
+  if ($("ep_con_nombre")) $("ep_con_nombre").value = "";
+  if ($("ep_con_apellido")) $("ep_con_apellido").value = "";
+  if ($("ep_con_cargo")) $("ep_con_cargo").value = "";
+  if ($("ep_con_mail")) $("ep_con_mail").value = "";
+  if ($("ep_con_telefono")) $("ep_con_telefono").value = "";
+  if ($("ep_con_dni")) $("ep_con_dni").value = "";
+  if ($("ep_con_observaciones")) $("ep_con_observaciones").value = "";
+
+  // ✅ Se autocompleta desde entidad
+  if ($("ep_con_red_discapacidad")) $("ep_con_red_discapacidad").value = "No";
+
+  // UI entidad vinculada (si existe)
+  if ($("ep_con_entidad_lbl")) $("ep_con_entidad_lbl").textContent = "—";
+
+  // UI result box
+  if ($("ep_result_meta")) $("ep_result_meta").textContent = "—";
+  if ($("ep_result_box")) $("ep_result_box").innerHTML = `<div class="muted">Todavía no se guardó nada.</div>`;
+}
+
+function collectEntidadPrivadaPayload(){
+  const ente_nombre = String($("ep_ente_nombre")?.value || "").trim();
+  if (ente_nombre.length < 3) throw new Error("Nombre de entidad es obligatorio (mín 3).");
+
+  const sector = String(ACOMBOS.ep_sector?.getSelection().value || "").trim();
+  if (!sector) throw new Error("Sector es obligatorio.");
+
+  const rubro = String(ACOMBOS.ep_rubro?.getSelection().value || "").trim();
+  if (!rubro) throw new Error("Rubro es obligatorio.");
+
+  const zona_cobertura = String(ACOMBOS.ep_zona_cobertura?.getSelection().value || "").trim();
+  if (!zona_cobertura) throw new Error("Zona de cobertura es obligatoria.");
+
+  const zona_comuna = String(ACOMBOS.ep_zona_comuna?.getSelection().value || "").trim();
+  if (!zona_comuna) throw new Error("Zona (Comuna) es obligatoria.");
+
+  const estado_contacto = String(ACOMBOS.ep_estado_contacto?.getSelection().value || "").trim();
+  if (!estado_contacto) throw new Error("Estado de contacto es obligatorio.");
+
+  const red_discapacidad = String(ACOMBOS.ep_red_discapacidad?.getSelection().value || "").trim();
+  if (!red_discapacidad) throw new Error("Red de discapacidad es obligatoria.");
+
+  const web = String($("ep_web")?.value || "").trim();
+  const direccion = String($("ep_direccion")?.value || "").trim();
+
+  // Persona contacto
+  const con_nombre = String($("ep_con_nombre")?.value || "").trim();
+  const con_apellido = String($("ep_con_apellido")?.value || "").trim();
+  if (con_nombre.length < 2 || con_apellido.length < 2){
+    throw new Error("Persona de contacto obligatoria: Nombre y Apellido (mín 2).");
+  }
+
+  // ✅ entidad
+  const entidad = {
+    ente_nombre,
+    sector,
+    rubro,
+    zona_cobertura,
+    zona_comuna,
+    estado_contacto,
+    red_discapacidad,
+    direccion,
+    web,
+    observaciones: String($("ep_observaciones")?.value || "").trim(),
+  };
+
+  // ✅ contacto (red discapacidad se autocompleta desde entidad)
+  const contacto = {
+    ente_nombre_ref: ente_nombre,
+    nombre: con_nombre,
+    apellido: con_apellido,
+    cargo: String($("ep_con_cargo")?.value || "").trim(),
+    mail: String($("ep_con_mail")?.value || "").trim(),
+    telefono: String($("ep_con_telefono")?.value || "").trim(),
+    dni: String($("ep_con_dni")?.value || "").trim(),
+    observaciones: String($("ep_con_observaciones")?.value || "").trim(),
+    red_discapacidad: (red_discapacidad === "Sí") ? "Sí" : "No",
+  };
+
+  return { entidad, contacto };
+}
+
+  function saveEntidadPrivadaWithContacto(){
+    let payload;
+    try{
+      payload = collectEntidadPrivadaPayload();
+    }catch(e){
+      alert(e.message || e);
+      return;
+    }
+
+    adminSetStatus("Guardando Entidad + Contacto…");
+
+    if ($("ep_result_meta")) $("ep_result_meta").textContent = "Guardando…";
+    if ($("ep_result_box")) $("ep_result_box").innerHTML = `<div class="muted">Guardando…</div>`;
+
+    google.script.run
+      .withSuccessHandler((res)=>{
+        // Esperado del backend: { ok:true, ente_id:"EN-001", persona_id:"PE-0001", message:"..." }
+        const ok = !!res?.ok;
+        const enteId = res?.ente_id || res?.enteId || "";
+        const perId = res?.persona_id || res?.personaId || "";
+
+        if ($("ep_result_meta")) $("ep_result_meta").textContent = ok ? "OK" : "—";
+        if ($("ep_result_box")){
+          $("ep_result_box").innerHTML = ok
+            ? `<div class="adminRow">
+                 <div class="id">${escapeHtml(enteId || "EN-—")}</div>
+                 <div class="name">Entidad creada • contacto: <b>${escapeHtml(perId || "PE-—")}</b></div>
+               </div>
+               <div class="muted" style="margin-top:8px;">${escapeHtml(res?.message || "Guardado OK")}</div>`
+            : `<div class="muted">Respuesta inesperada. ${escapeHtml(res?.message || "")}</div>`;
+        }
+
+        adminSetStatus(res?.message || "Entidad + Contacto OK");
+        // refrescamos catálogos (entes/personas) para que aparezcan en combos de acciones
+        loadBootstrap(true);
+      })
+      .withFailureHandler((err)=>{
+        const msg = err?.message || err;
+        if ($("ep_result_meta")) $("ep_result_meta").textContent = "Error";
+        if ($("ep_result_box")) $("ep_result_box").innerHTML = `<div class="muted">Error: ${escapeHtml(msg)}</div>`;
+        adminSetStatus("Error guardando Entidad + Contacto", "bad");
+        alert("Error: " + msg);
+      })
+      .createEntidadPrivadaWithContacto(payload);
+  }
+function downloadBase64File_(base64, filename, mime){
+  const byteChars = atob(base64);
+  const byteNums = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+  const blob = new Blob([new Uint8Array(byteNums)], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildExportMatrixFromFiltered_(){
+  const rows = Array.isArray(FILTERED) ? FILTERED : [];
+  const cols = Array.isArray(DISPLAY_COLUMNS) ? DISPLAY_COLUMNS : [];
+  if (!cols.length) throw new Error("DISPLAY_COLUMNS vacío.");
+
+  // header visible
+  const header = cols.map(c => colLabel(c));
+
+  // filas visibles (misma lógica “plana” que CSV)
+  const dataRows = rows.map(r => cols.map(c => valueForExport_(r, c)));
+
+  return { cols, header, dataRows };
+}
+
+function exportFilteredAccionesXLSX(){
+  let payload;
+  try {
+    const { header, dataRows } = buildExportMatrixFromFiltered_();
+
+    const estado = String($("estadoFiltro")?.value || "").trim();
+    const q = String($("q")?.value || "").trim();
+
+    payload = {
+      sheetName: "Tablero Acciones",
+      header,
+      rows: dataRows,
+      meta: { estado, q }
+    };
+  } catch (e){
+    alert("No se pudo preparar exportación: " + (e?.message || e));
+    return;
+  }
+
+  // UX: deshabilitar botón mientras exporta
+  const btn = $("btnExport");
+  const prevTxt = btn ? btn.textContent : "";
+  if (btn){
+    btn.disabled = true;
+    btn.textContent = "Exportando…";
+  }
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      if (btn){
+        btn.disabled = false;
+        btn.textContent = prevTxt || "Exportar (Excel)";
+      }
+      if (!res || !res.base64 || !res.filename){
+        alert("Export falló: respuesta inválida.");
+        return;
+      }
+      downloadBase64File_(
+        res.base64,
+        res.filename,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+    })
+    .withFailureHandler((err) => {
+      if (btn){
+        btn.disabled = false;
+        btn.textContent = prevTxt || "Exportar (Excel)";
+      }
+      alert("Export falló: " + (err?.message || err));
+    })
+    .exportAccionesXlsx(payload);
+}
+
+  function bindEntidadPrivadaModule(){
+    // init combos
+    buildEntidadPrivadaControls();
+
+    // botones
+    const bSave = $("ep_btn_guardar");
+    if (bSave && !bSave.__bound){
+      bSave.__bound = true;
+      bSave.addEventListener("click", saveEntidadPrivadaWithContacto);
+    }
+
+    const bClear = $("ep_btn_limpiar");
+    if (bClear && !bClear.__bound){
+      bClear.__bound = true;
+      bClear.addEventListener("click", clearEntidadPrivadaForm);
+    }
+      // ✅ Mostrar entidad vinculada (live)
+  const entInput = $("ep_ente_nombre");
+  const entLbl = $("ep_con_entidad_lbl");
+  if (entInput && entLbl && !entInput.__boundEntidadLbl){
+    entInput.__boundEntidadLbl = true;
+    const sync = ()=> { entLbl.textContent = String(entInput.value || "").trim() || "—"; };
+    entInput.addEventListener("input", sync);
+    sync();
+  }
+
+  // ✅ Autocompletar red discapacidad persona desde entidad (estado actual del combo)
+  const rd = String(ACOMBOS.ep_red_discapacidad?.getSelection().value || "").trim();
+  if ($("ep_con_red_discapacidad")){
+    $("ep_con_red_discapacidad").value = (rd === "Sí") ? "Sí" : "No";
+  }
+  }
+// =========================
+// ✅ Admin: Personas reconocidas (PERSONAS)
+// =========================
+function buildPersonaReconocidaControls(){
+  // Reusa catálogo de áreas (mismo que ACOMBOS.area_id, pero separado)
+  ACOMBOS.pr_area_id ??= createCombo($("pr_cb_area_id"), {
+    placeholder:"(opcional)",
+    options: buildAreasOpts(),
+    allowCustom: false,
+  });
+  // default vacío
+  ACOMBOS.pr_area_id.clear();
+}
+
+function clearPersonaReconocidaForm(){
+  if ($("pr_per_apellido")) $("pr_per_apellido").value = "";
+  if ($("pr_per_nombre")) $("pr_per_nombre").value = "";
+  if ($("pr_per_dni")) $("pr_per_dni").value = "";
+  if ($("pr_per_mail")) $("pr_per_mail").value = "";
+  if ($("pr_per_tel")) $("pr_per_tel").value = "";
+  if ($("pr_per_rol")) $("pr_per_rol").value = "";
+  if ($("pr_per_obs")) $("pr_per_obs").value = "";
+  ACOMBOS.pr_area_id?.clear();
+
+  if ($("pr_persona_hint")) $("pr_persona_hint").textContent = "* Obligatorio: Apellido y Nombre.";
+  if ($("pr_result_meta")) $("pr_result_meta").textContent = "—";
+  if ($("pr_result_box")) $("pr_result_box").innerHTML = `<div class="muted">Todavía no se guardó nada.</div>`;
+}
+
+function collectPersonaReconocidaPayload(){
+  const apellido = String($("pr_per_apellido")?.value || "").trim();
+  const nombre = String($("pr_per_nombre")?.value || "").trim();
+  if (apellido.length < 2 || nombre.length < 2) throw new Error("Apellido y nombre son obligatorios (mín 2).");
+
+  return {
+    apellido,
+    nombre,
+    dni: String($("pr_per_dni")?.value || "").trim(),
+    mail: String($("pr_per_mail")?.value || "").trim(),
+    telefono: String($("pr_per_tel")?.value || "").trim(),
+    area_id: ACOMBOS.pr_area_id?.getSelection().value || "",
+    rol: String($("pr_per_rol")?.value || "").trim(),
+    observaciones: String($("pr_per_obs")?.value || "").trim(),
+    // si querés marcarla distinto en la hoja:
+    // tipo: "RECONOCIDA"
+    activo: "SI",
+  };
+}
+
+function savePersonaReconocida(){
+  let payload;
+  try{
+    payload = collectPersonaReconocidaPayload();
+  }catch(e){
+    alert(e.message || e);
+    return;
+  }
+
+  adminSetStatus("Creando persona reconocida…");
+
+  if ($("pr_persona_hint")) $("pr_persona_hint").textContent = "Guardando…";
+  if ($("pr_result_meta")) $("pr_result_meta").textContent = "Guardando…";
+  if ($("pr_result_box")) $("pr_result_box").innerHTML = `<div class="muted">Guardando…</div>`;
+
+  // ✅ opción A: reutilizar tu createPersona(person)
+  google.script.run
+    .withSuccessHandler((res)=>{
+      const created = !!res?.created;
+      const msg = res?.message || (created ? "Persona creada" : "No se creó (duplicado)");
+
+      if ($("pr_persona_hint")) $("pr_persona_hint").textContent = msg;
+
+      if ($("pr_result_meta")) $("pr_result_meta").textContent = created ? "OK" : "—";
+      if ($("pr_result_box")){
+        $("pr_result_box").innerHTML = created
+          ? `<div class="adminRow"><div class="id">PE</div><div class="name">Persona creada</div></div>
+             <div class="muted" style="margin-top:8px;">${escapeHtml(msg)}</div>`
+          : `<div class="muted">${escapeHtml(msg)}</div>`;
+      }
+
+      adminSetStatus("Persona OK");
+      if (created) clearPersonaReconocidaForm();
+
+      // refresca catálogos para combos
+      loadBootstrap(true);
+    })
+    .withFailureHandler((err)=>{
+      const m = err?.message || err;
+      if ($("pr_persona_hint")) $("pr_persona_hint").textContent = "Error: " + m;
+      if ($("pr_result_meta")) $("pr_result_meta").textContent = "Error";
+      if ($("pr_result_box")) $("pr_result_box").innerHTML = `<div class="muted">Error: ${escapeHtml(m)}</div>`;
+      adminSetStatus("Error creando persona", "bad");
+      alert("Error: " + m);
+    })
+    .createPersona(payload);
+}
+
+function bindPersonaReconocidaModule(){
+  buildPersonaReconocidaControls();
+
+  const bSave = $("pr_btn_guardar");
+  if (bSave && !bSave.__bound){
+    bSave.__bound = true;
+    bSave.addEventListener("click", savePersonaReconocida);
+  }
+
+  const bClear = $("pr_btn_limpiar");
+  if (bClear && !bClear.__bound){
+    bClear.__bound = true;
+    bClear.addEventListener("click", clearPersonaReconocidaForm);
+  }
+}
+
+// =========================
+// ✅ Admin: Alta Área + Contacto
+// =========================
+function clearAreaContactoForm(){
+  if ($("ac_area_nombre")) $("ac_area_nombre").value = "";
+
+  // Persona (contacto)
+  if ($("ac_con_nombre")) $("ac_con_nombre").value = "";
+  if ($("ac_con_apellido")) $("ac_con_apellido").value = "";
+  if ($("ac_con_cargo")) $("ac_con_cargo").value = "";
+  if ($("ac_con_rol")) $("ac_con_rol").value = "";
+  if ($("ac_con_mail")) $("ac_con_mail").value = "";
+  if ($("ac_con_telefono")) $("ac_con_telefono").value = "";
+  if ($("ac_con_dni")) $("ac_con_dni").value = "";
+  if ($("ac_con_observaciones")) $("ac_con_observaciones").value = "";
+  if ($("ac_con_red_discapacidad")) $("ac_con_red_discapacidad").value = "No";
+
+  // UI result box
+  if ($("ac_result_meta")) $("ac_result_meta").textContent = "—";
+  if ($("ac_result_box")) $("ac_result_box").innerHTML = `<div class="muted">Todavía no se guardó nada.</div>`;
+}
+
+function collectAreaContactoPayload(){
+  const area_nombre = String($("ac_area_nombre")?.value || "").trim();
+  if (area_nombre.length < 3) throw new Error("Nombre de área es obligatorio (mín 3).");
+
+  const con_nombre = String($("ac_con_nombre")?.value || "").trim();
+  const con_apellido = String($("ac_con_apellido")?.value || "").trim();
+  if (con_nombre.length < 2 || con_apellido.length < 2){
+    throw new Error("Contacto obligatorio: Nombre y Apellido (mín 2).");
+  }
+
+  const area = { area_nombre };
+
+  const contacto = {
+    nombre: con_nombre,
+    apellido: con_apellido,
+    cargo: String($("ac_con_cargo")?.value || "").trim(),
+    rol: String($("ac_con_rol")?.value || "").trim(),
+    mail: String($("ac_con_mail")?.value || "").trim(),
+    telefono: String($("ac_con_telefono")?.value || "").trim(),
+    dni: String($("ac_con_dni")?.value || "").trim(),
+    observaciones: String($("ac_con_observaciones")?.value || "").trim(),
+    red_discapacidad: String($("ac_con_red_discapacidad")?.value || "").trim() || "No",
+    gcba: "SI",
+  };
+
+  return { area, contacto };
+}
+
+function saveAreaWithContacto(){
+  let payload;
+  try{
+    payload = collectAreaContactoPayload();
+  }catch(e){
+    alert(e.message || e);
+    return;
+  }
+
+  adminSetStatus("Guardando Área + Contacto…");
+
+  if ($("ac_result_meta")) $("ac_result_meta").textContent = "Guardando…";
+  if ($("ac_result_box")) $("ac_result_box").innerHTML = `<div class="muted">Guardando…</div>`;
+
+  google.script.run
+    .withSuccessHandler((res)=>{
+      const ok = !!res?.ok;
+      const areaId = res?.id_area || res?.area_id || "";
+      const perId  = res?.id_persona || res?.persona_id || "";
+
+      if ($("ac_result_meta")) $("ac_result_meta").textContent = ok ? "OK" : "—";
+      if ($("ac_result_box")){
+        $("ac_result_box").innerHTML = ok
+          ? `<div class="adminRow">
+               <div class="id">${escapeHtml(areaId || "AR-—")}</div>
+               <div class="name">Área creada • contacto: <b>${escapeHtml(perId || "PE-—")}</b></div>
+             </div>
+             <div class="muted" style="margin-top:8px;">${escapeHtml(res?.message || "Guardado OK")}</div>`
+          : `<div class="muted">Respuesta inesperada. ${escapeHtml(res?.message || "")}</div>`;
+      }
+
+      adminSetStatus(res?.message || "Área + Contacto OK");
+
+      // refrescamos catálogos (áreas/personas) para que aparezcan en combos
+      loadBootstrap(true);
+    })
+    .withFailureHandler((err)=>{
+      const msg = err?.message || err;
+      if ($("ac_result_meta")) $("ac_result_meta").textContent = "Error";
+      if ($("ac_result_box")) $("ac_result_box").innerHTML = `<div class="muted">Error: ${escapeHtml(msg)}</div>`;
+      adminSetStatus("Error guardando Área + Contacto", "bad");
+      alert("Error: " + msg);
+    })
+    .createAreaWithContacto(payload); // ✅ ENDPOINT NUEVO en Code.gs
+}
+
+function bindAreaContactoModule(){
+  const bSave = $("ac_btn_guardar");
+  if (bSave && !bSave.__bound){
+    bSave.__bound = true;
+    bSave.addEventListener("click", saveAreaWithContacto);
+  }
+
+  const bClear = $("ac_btn_limpiar");
+  if (bClear && !bClear.__bound){
+    bClear.__bound = true;
+    bClear.addEventListener("click", clearAreaContactoForm);
+  }
+
+  // defaults
+  if ($("ac_con_red_discapacidad") && !$("ac_con_red_discapacidad").value){
+    $("ac_con_red_discapacidad").value = "No";
+  }
+}
+
+function debugFillEjeGobOptions_(){
+  const el = document.getElementById("segEjeGob");
+  if (!el) {
+    console.warn("[debugFillEjeGobOptions_] No existe #segEjeGob");
+    return;
+  }
+
+  const opts = [
+    "EJE 01 · Integración y cercanía",
+    "EJE 02 · Bienestar y cuidado",
+    "EJE 03 · Gestión y modernización",
+  ];
+
+  // Caso A: <select id="segEjeGob">
+  if (el.tagName === "SELECT") {
+    el.innerHTML = `<option value="">Todos</option>` + opts
+      .map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`)
+      .join("");
+    console.log("[debugFillEjeGobOptions_] OK (select)");
+    return;
+  }
+
+  // Caso B: input + datalist (input list="algo")
+  const listId = el.getAttribute("list");
+  if (listId) {
+    let dl = document.getElementById(listId);
+    if (!dl) {
+      dl = document.createElement("datalist");
+      dl.id = listId;
+      document.body.appendChild(dl);
+    }
+    dl.innerHTML = opts.map(v => `<option value="${escapeHtml(v)}"></option>`).join("");
+    console.log("[debugFillEjeGobOptions_] OK (datalist)");
+    return;
+  }
+
+  // Caso C: input sin datalist → le metemos datalist nosotros
+  const autoId = "dl_segEjeGob_debug";
+  el.setAttribute("list", autoId);
+  let dl = document.getElementById(autoId);
+  if (!dl) {
+    dl = document.createElement("datalist");
+    dl.id = autoId;
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = opts.map(v => `<option value="${escapeHtml(v)}"></option>`).join("");
+  console.log("[debugFillEjeGobOptions_] OK (auto datalist)");
+}
+
+  // =========================
+  // Admin: módulo (switch + refresh)
+  // =========================
+function adminGetModule(){
+  const sel = $("adm_module");
+  const v = String(sel?.value || "").trim();
+  // valores del Index: entidad_privada | area_contacto | persona_reconocida
+  return v || "entidad_privada";
+}
+
+function adminShowModule(mod){
+  const m = mod || adminGetModule();
+
+  const map = {
+    entidad_privada: "admPanel_entidad_privada",
+    area_contacto: "admPanel_area_contacto",
+    persona_reconocida: "admPanel_persona_reconocida",
+  };
+
+  // ocultar todos
+  Object.values(map).forEach(id=>{
+    const el = $(id);
+    if (el) el.style.display = "none";
+  });
+
+  // mostrar el seleccionado
+  const panelId = map[m];
+  const panel = $(panelId);
+  if (panel) panel.style.display = "";
+
+  const labels = {
+    entidad_privada: "Carga de Entidades",
+    area_contacto: "Carga de Área + Contacto",
+    persona_reconocida: "Personas reconocidas",
+  };
+
+  adminSetStatus(labels[m] || "Carga");
+}
+
+function adminRefreshCurrent(){
+  const m = adminGetModule();
+
+  if (m === "entidad_privada") {
+    bindEntidadPrivadaModule();
+    adminSetStatus("Carga de Entidades lista");
+    return;
+  }
+
+  if (m === "persona_reconocida") {
+    bindPersonaReconocidaModule();
+    adminSetStatus("Personas reconocidas listo");
+    return;
+  }
+
+  if (m === "area_contacto") {
+    bindAreaContactoModule();
+    adminSetStatus("Área + contacto listo");
+    return;
+  }
+
+  adminSetStatus("Módulo listo para conectar");
+}
+function loadEntidades(){
+  const box  = $("entBody");
+  const meta = $("entMeta");
+
+  // selector principal (tipo de entidad)
+  const kind = String($("entKind")?.value || "entidad_privada").trim();
+
+  // buscador general
+  const q = String($("entQ")?.value || "").trim();
+
+  // ✅ filtros nuevos (si no existen en el HTML, quedan vacíos y no filtran)
+  const fSector = String($("entSector")?.value || "").trim();
+  const fRubro  = String($("entRubro")?.value || "").trim();
+  const fComuna = String($("entComuna")?.value || "").trim();
+
+  if (box) box.innerHTML = `<tr><td class="empty">Cargando…</td></tr>`;
+  if (meta) meta.textContent = "Cargando…";
+
+  google.script.run
+    .withSuccessHandler((res)=>{
+      if (!res || !res.ok) throw new Error(res?.message || "Respuesta inválida");
+
+      const columns = Array.isArray(res.columns) ? res.columns : [];
+      let rows = Array.isArray(res.rows) ? res.rows : [];
+
+      // ✅ buscador client-side
+      if (q) rows = rows.filter(r => rowMatchesAny(r, q, columns));
+
+      // ✅ filtros client-side (solo si el campo existe en esa tabla)
+      if (fSector) rows = rows.filter(r => normText(r.sector) === normText(fSector));
+      if (fRubro)  rows = rows.filter(r => normText(r.rubro)  === normText(fRubro));
+      // comuna: a veces viene "zona_comuna" o "comuna"
+      if (fComuna) rows = rows.filter(r => {
+        const v = r.zona_comuna ?? r.comuna ?? "";
+        return normText(v) === normText(fComuna);
+      });
+
+      // ✅ headers “bonitos”
+      const prettyCols = columns.map(prettyEntHeader);
+
+      if (meta) meta.textContent = `${res.label || kind} • ${rows.length} registros`;
+
+      renderDynamicTable({
+        theadId: "entTheadRow",
+        tbodyId: "entBody",
+        // renderDynamicTable espera columnas reales para extraer datos,
+        // así que le pasamos las columnas reales, pero dibujamos headers bonitos adentro:
+        columns,
+        rows,
+        prettyColumns: prettyCols, // ✅ parámetro extra
+      });
+
+      // ✅ (opcional) reconstruir opciones de filtros según lo que haya cargado
+buildEntidadesFilterOptions(res.kind || kind, rows);
+
+    })
+    .withFailureHandler((err)=>{
+      const msg = err?.message || err;
+      if (meta) meta.textContent = "Error";
+      if (box) box.innerHTML = `<tr><td class="empty">Error: ${escapeHtml(msg)}</td></tr>`;
+    })
+    .listEntidades({ kind });
+}
+
+function participantsToText_(jsonStr){
+  const items = parseJsonArray(jsonStr).map(normalizeParticipant).filter(x => x.name || x.id);
+  if (!items.length) return "";
+  // "Nombre (Estado) | Nombre2 (Estado2)"
+  return items.map(it => {
+    const main = it.name || it.id || "";
+    const st = it.invState ? ` (${it.invState})` : "";
+    return `${main}${st}`.trim();
+  }).join(" | ");
+}
+
+function valueForExport_(row, col){
+  // respeta lo que ves en la tabla, pero en formato plano
+  const v = row?.[col];
+
+  if (col === "estado_accion") return String(v || "");
+
+  if (col.startsWith("area_gcba_org_") && col.endsWith("_id")){
+    const id = String(v || "");
+    const name = String(row?.[col + "_name"] || "");
+    return name ? `${id} • ${name}` : id;
+  }
+
+  if (col.startsWith("ente_org_") && col.endsWith("_id")){
+    const id = String(v || "");
+    const name = String(row?.[col + "_name"] || "");
+    return name ? `${id} • ${name}` : id;
+  }
+
+  if (col === "participantes_entidad_json" || col === "participantes_persona_json"){
+    return participantsToText_(v);
+  }
+
+  return String(v ?? "");
+}
+
+function csvEscape_(s){
+  const txt = String(s ?? "");
+  // CSV estándar: comillas dobles para campos con coma / newline / comillas
+  if (/[",\n\r;]/.test(txt)) return `"${txt.replaceAll('"','""')}"`;
+  return txt;
+}
+
+function downloadCsv_(filename, csvText){
+  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportFilteredAccionesCSV(){
+  const rows = Array.isArray(FILTERED) ? FILTERED : [];
+  const cols = Array.isArray(DISPLAY_COLUMNS) ? DISPLAY_COLUMNS : [];
+
+  if (!cols.length){
+    alert("No hay columnas para exportar (DISPLAY_COLUMNS vacío).");
+    return;
+  }
+
+  // header “bonito” como en la tabla
+  const header = cols.map(c => csvEscape_(colLabel(c))).join(",");
+
+  const lines = [header];
+
+  rows.forEach(r => {
+    const line = cols.map(c => csvEscape_(valueForExport_(r, c))).join(",");
+    lines.push(line);
+  });
+
+  // Nombre con filtro actual (opcional)
+  const estado = String($("estadoFiltro")?.value || "").trim();
+  const q = String($("q")?.value || "").trim();
+
+  const ymd = new Date().toISOString().slice(0,10);
+  const suffix = [
+    estado ? `estado_${estado}` : "",
+    q ? `q_${q.replace(/[^\w]+/g, "_").slice(0,30)}` : ""
+  ].filter(Boolean).join("__");
+
+  const filename = `RS_TableroAcciones_${ymd}${suffix ? "__" + suffix : ""}.csv`;
+
+  downloadCsv_(filename, lines.join("\n"));
+}
+
+  // =========================
+  // Tabs
+  // =========================
+function setTab(tab){
+  const isAcciones    = (tab === "acciones");
+  const isCarga       = (tab === "carga");
+  const isAdmin       = (tab === "admin");
+  const isMediciones  = (tab === "mediciones");
+  const isEntidades   = (tab === "entidades");
+  const isCalendario  = (tab === "calendario"); // ✅ NUEVO
+
+  // views
+  if ($("viewTableroEntidades")) $("viewTableroEntidades").style.display = isEntidades ? "" : "none";
+  if ($("viewAcciones"))         $("viewAcciones").style.display         = isAcciones ? "" : "none";
+  if ($("viewCarga"))            $("viewCarga").style.display            = isCarga ? "" : "none";
+  if ($("viewAdmin"))            $("viewAdmin").style.display            = isAdmin ? "" : "none";
+  if ($("viewMediciones"))       $("viewMediciones").style.display       = isMediciones ? "" : "none";
+  if ($("viewCalendario"))       $("viewCalendario").style.display       = isCalendario ? "" : "none"; // ✅ NUEVO
+
+  // tabs active
+  if ($("tabTableroEntidades")) $("tabTableroEntidades").classList.toggle("active", isEntidades);
+  if ($("tabAcciones"))         $("tabAcciones").classList.toggle("active", isAcciones);
+  if ($("tabCarga"))            $("tabCarga").classList.toggle("active", isCarga);
+  if ($("tabAdmin"))            $("tabAdmin").classList.toggle("active", isAdmin);
+  if ($("tabMediciones"))       $("tabMediciones").classList.toggle("active", isMediciones);
+  if ($("tabCalendario"))       $("tabCalendario").classList.toggle("active", isCalendario); // ✅ NUEVO
+
+  // top buttons
+  if ($("btnRefresh")) $("btnRefresh").style.display = isAcciones ? "" : "none";
+  if ($("btnExport")) $("btnExport").style.display = isAcciones ? "" : "none";
+
+
+  if ($("btnCreate")) $("btnCreate").style.display = "none";
+  if ($("btnAdminRefresh")) $("btnAdminRefresh").style.display = "none";
+
+  // admin init
+  if (isAdmin){
+    const m = adminGetModule();
+    adminShowModule(m);
+    if (m === "entidad_privada") bindEntidadPrivadaModule();
+    if (m === "persona_reconocida") bindPersonaReconocidaModule();
+    if (m === "area_contacto") bindAreaContactoModule();
+    adminRefreshCurrent();
+  }
+
+  // entidades init
+  if (isEntidades){
+    loadEntidades();
+  }
+// ✅ mediciones init
+if (isMediciones){
+  if (typeof window.loadMediciones === "function") {
+    window.loadMediciones();
+  } else {
+    console.warn("Mediciones: falta implementar loadMediciones()");
+  }
+}
+
+  // ✅ calendario init (tolerante a cualquier implementación)
+  if (isCalendario){
+    // Opción A: si tenés una función global
+    if (typeof window.loadCalendario === "function") {
+      window.loadCalendario();
+    }
+    // Opción B: si tu ViewCalendario expone init()
+    else if (window.ViewCalendario && typeof window.ViewCalendario.init === "function") {
+      window.ViewCalendario.init();
+    }
+    // Opción C: si tu calendario está montado en un objeto tipo VIEWS
+    else if (window.VIEWS && window.VIEWS.calendario && typeof window.VIEWS.calendario.init === "function") {
+      window.VIEWS.calendario.init();
+    }
+    // Fallback: mostrar mensaje (así no queda “vacío”)
+    else {
+      const box = $("viewCalendario");
+      if (box) {
+        box.innerHTML = `<div class="muted" style="padding:16px;">
+          Calendario: la vista existe pero no hay función de carga (loadCalendario / ViewCalendario.init).
+        </div>`;
+      }
+      
+      // y log para debug
+      console.warn("Calendario: falta implementar loadCalendario() o ViewCalendario.init()");
+    }
+  }
+}
+function getSegmentValue_(segEl){
+  if (!segEl) return "";
+  const active = segEl.querySelector(".seg.active");
+  return active ? String(active.getAttribute("data-value") || "").trim() : "";
+}
+
+function setSegmentValue_(segEl, value){
+  if (!segEl) return;
+  const v = String(value || "");
+  segEl.querySelectorAll(".seg").forEach(b=>{
+    const isOn = String(b.getAttribute("data-value") || "") === v;
+    b.classList.toggle("active", isOn);
+  });
+}
+
+function buildSegmented_(segEl, values){
+  if (!segEl) return;
+
+  const keep = getSegmentValue_(segEl); // preserva selección
+  segEl.innerHTML = "";
+
+  // Opción "Todos"
+  const allBtn = document.createElement("button");
+  allBtn.type = "button";
+  allBtn.className = "seg";
+  allBtn.textContent = "Todos";
+  allBtn.setAttribute("data-value", "");
+  segEl.appendChild(allBtn);
+
+  (values || []).forEach(v=>{
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "seg";
+    b.textContent = v;
+    b.setAttribute("data-value", v);
+    segEl.appendChild(b);
+  });
+
+  // Selección inicial
+  const toSelect = (values || []).includes(keep) ? keep : "";
+  setSegmentValue_(segEl, toSelect);
+
+  // Click handler (delegado)
+  if (!segEl.__bound){
+    segEl.__bound = true;
+    segEl.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button.seg[data-value]");
+      if (!btn) return;
+      setSegmentValue_(segEl, btn.getAttribute("data-value") || "");
+      applyFilters();
+    });
+  }
+}
+function buildSliderChips_(wrapEl, values, opts){
+  opts = opts || {};
+  const selected = String(opts.selected || "");
+  const onChange = typeof opts.onChange === "function" ? opts.onChange : ()=>{};
+  const includeTodos = opts.includeTodos !== false;
+
+  if (!wrapEl) return;
+  wrapEl.innerHTML = "";
+
+  const data = [];
+  if (includeTodos) data.push({ label:"Todos", value:"" });
+  (values || []).forEach(v => {
+    const vv = String(v ?? "").trim();
+    if (vv) data.push({ label: vv, value: vv });
+  });
+
+  const slider = document.createElement("div");
+  slider.className = "chip-slider";
+
+  const btnL = document.createElement("button");
+  btnL.type = "button";
+  btnL.className = "chip-slider-btn";
+  btnL.textContent = "‹";
+
+  const btnR = document.createElement("button");
+  btnR.type = "button";
+  btnR.className = "chip-slider-btn";
+  btnR.textContent = "›";
+
+  const rail = document.createElement("div");
+  rail.className = "chip-slider-rail";
+
+  data.forEach(item => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = item.label;
+
+    const isActive = (item.value === selected) || (item.value === "" && selected === "");
+    if (isActive) b.classList.add("active");
+
+    b.addEventListener("click", () => {
+      rail.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      onChange(item.value);
+    });
+
+    rail.appendChild(b);
+  });
+
+  const amt = () => Math.max(240, Math.floor(rail.clientWidth * 0.7));
+  btnL.addEventListener("click", () => rail.scrollBy({ left: -amt(), behavior:"smooth" }));
+  btnR.addEventListener("click", () => rail.scrollBy({ left:  amt(), behavior:"smooth" }));
+
+  slider.appendChild(btnL);
+  slider.appendChild(rail);
+  slider.appendChild(btnR);
+  wrapEl.appendChild(slider);
+}
+
+function normText(s){
+  return String(s ?? "").toLowerCase().trim();
+}
+
+function rowMatchesAny(row, q, columns){
+  if (!q) return true;
+  const needle = normText(q);
+  const hay = (columns || []).map(c => String(row[c] ?? "")).join(" | ");
+  return normText(hay).includes(needle);
+}
+
+function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns }){
+  const thead = $(theadId);
+  const tbody = $(tbodyId);
+
+  const cols = columns || [];
+  const pretty = Array.isArray(prettyColumns) && prettyColumns.length === cols.length
+    ? prettyColumns
+    : cols;
+
+  if (thead) thead.innerHTML = pretty.map(c => `<th>${escapeHtml(c)}</th>`).join("");
+
+  if (!rows || !rows.length){
+    if (tbody) tbody.innerHTML = `<tr><td class="empty" colspan="${cols.length || 1}">Sin resultados.</td></tr>`;
+    return;
+  }
+
+  if (tbody){
+    tbody.innerHTML = rows.map(r => {
+      const tds = cols.map(c => `<td>${escapeHtml(r[c] ?? "")}</td>`).join("");
+      return `<tr>${tds}</tr>`;
+    }).join("");
+  }
+}
+
+  // =========================
+  // Bootstrap / Data
+  // =========================
+  function loadBootstrap(soft=false){
+    if (!soft){
+      if ($("tbody")) $("tbody").innerHTML = `<tr><td class="empty">Cargando…</td></tr>`;
+    }
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (!res || !res.ok) throw new Error("Bootstrap inválido");
+
+        DISPLAY_COLUMNS = res.displayColumns || [];
+        CATALOGS = res.catalogs || { areas: [], entes: [], personas: [] };
+        VALIDATIONS = res.validations || {};
+        PARTICIPANT_STATES = res.participantStates || ["A invitar","Invitado","Confirmado","Participó","No participó","Cancelado"];
+        LABELS = res.labels || {};
+
+        ESTADOS = getValList(["estadoAccion","estado_accion","EstadoAccion","Estado Accion"], ["IDEA","DESARROLLO","REALIZADO","CANCELADO"]);
+
+        const sel = $("estadoFiltro");
+        if (sel){
+          sel.innerHTML = "";
+          ["Todos", ...ESTADOS].forEach(v=>{
+            const o = document.createElement("option");
+            o.value = v === "Todos" ? "" : v;
+            o.textContent = v;
+            sel.appendChild(o);
+          });
+        }
+renderHeader();
+
+// ✅ refs + bind de filtros (IMPORTANTE)
+initFiltersRefs_();
+bindAccionesFilters_();
+
+// ✅ date pickers (edit + create)
+attachDatePicker();
+attachCreateDatePicker();
+
+buildEditControls();
+bindParticipantButtons();
+
+buildCreateControls();
+bindCreateParticipantButtons();
+
+buildAdminControls();
+
+// ✅ arma filtros segmentados (usa ALL, pero tolera vacío; luego se vuelve a llamar en loadData)
+buildAccionesFilterOptions_();
+
+loadData();
+
+      })
+      .withFailureHandler((err) => {
+        if ($("tbody")) $("tbody").innerHTML = `<tr><td class="empty">Error: ${escapeHtml(err?.message || err)}</td></tr>`;
+        adminSetStatus("Error bootstrap", "bad");
+      })
+      .getUIBootstrap();
+  }
+
+  function loadData(){
+    if ($("tbody")) $("tbody").innerHTML = `<tr><td class="empty" colspan="${DISPLAY_COLUMNS.length + 1}">Cargando…</td></tr>`;
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (!res || !res.ok) throw new Error("Respuesta inválida");
+
+        ALL = res.rows || [];
+        META = res.meta || null;
+ACCIONES_FILTER_STATE.year  ||= "";
+ACCIONES_FILTER_STATE.tipo  ||= "";
+ACCIONES_FILTER_STATE.eje   ||= "";
+ACCIONES_FILTER_STATE.linea ||= "";
+
+buildAccionesYearOptionsFromAll_();
+buildAccionesFilterOptions_();
+applyFilters();
+
+
+// ✅ si estoy en calendario, refresco pintado (AHORA sí, con ALL cargado)
+const vCal = document.getElementById("viewCalendario");
+if (vCal && vCal.style.display !== "none") {
+  try { refreshCalendario(); } catch(_) {}
+}
+
+      })
+      .withFailureHandler((err) => {
+        if ($("tbody")) $("tbody").innerHTML = `<tr><td class="empty" colspan="${DISPLAY_COLUMNS.length + 1}">Error: ${escapeHtml(err?.message || err)}</td></tr>`;
+      })
+      .listAcciones();
+  }
+/* =========================
+ * CALENDARIO — loader alineado a tu Index.html
+ * Usa: #calGridDays, #calMonthLabel, #calRangeLabel, #calTitle, #calDesc
+ * ========================= */
+
+window.loadCalendario = function () {
+  const root = document.getElementById("viewCalendario");
+  if (!root) return;
+
+  // evita re-init
+  if (root.__initialized) {
+    refreshCalendario();
+    return;
+  }
+  root.__initialized = true;
+
+  const today = new Date();
+  window.CAL_STATE = {
+    year: today.getFullYear(),
+    month: today.getMonth(), // 0-11
+  };
+
+  document.getElementById("btnCalPrev")?.addEventListener("click", () => {
+    window.CAL_STATE.month--;
+    if (window.CAL_STATE.month < 0) { window.CAL_STATE.month = 11; window.CAL_STATE.year--; }
+    refreshCalendario();
+  });
+
+  document.getElementById("btnCalNext")?.addEventListener("click", () => {
+    window.CAL_STATE.month++;
+    if (window.CAL_STATE.month > 11) { window.CAL_STATE.month = 0; window.CAL_STATE.year++; }
+    refreshCalendario();
+  });
+
+  document.getElementById("btnCalToday")?.addEventListener("click", () => {
+    const d = new Date();
+    window.CAL_STATE.year = d.getFullYear();
+    window.CAL_STATE.month = d.getMonth();
+    refreshCalendario();
+  });
+
+  document.getElementById("btnCalRefresh")?.addEventListener("click", refreshCalendario);
+
+  refreshCalendario();
+};
+
+// =========================
+// CALENDARIO — pintar acciones desde ALL
+// =========================
+function calIsoDateOnly(v){
+  // acepta "YYYY-MM-DD" o "YYYY-MM-DDTHH:mm..." y devuelve YYYY-MM-DD
+  const s = String(v || "").trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : "";
+}
+
+function calMonthKey(y, m0){
+  // m0: 0-11
+  return `${y}-${String(m0 + 1).padStart(2, "0")}`;
+}
+
+function renderCalEventPill(row){
+  const id = String(row?.id_accion || "").trim();
+  const name = String(row?.nombre_accion || "Acción").trim();
+  const estado = String(row?.estado_accion || "").toUpperCase();
+
+  // clase opcional por estado (si querés estilizar luego en CSS)
+  const cls = `calPill state-${estado || "NA"}`;
+
+  return `
+    <button class="${cls}" type="button"
+      data-cal-edit="${escapeHtml(id)}"
+      title="${escapeHtml(name)}">
+      ${escapeHtml(name)}
+    </button>
+  `;
+}
+
+function paintCalendarioActions(){
+  const st = window.CAL_STATE || { year: new Date().getFullYear(), month: new Date().getMonth() };
+  const y = st.year;
+  const m0 = st.month;
+  const mk = calMonthKey(y, m0);
+
+  // Si todavía no cargó ALL, no explota
+const rows = Array.isArray(FILTERED) ? FILTERED : [];
+
+
+  // index por fecha YYYY-MM-DD
+  const byDate = new Map();
+  rows.forEach(r => {
+    const d = calIsoDateOnly(r?.fecha_accion);
+    if (!d) return;
+    if (!d.startsWith(mk)) return; // solo el mes visible
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d).push(r);
+  });
+
+  // pintar cada celda con data-date
+  const cells = document.querySelectorAll('#viewCalendario .calCell[data-date]');
+  cells.forEach(cell => {
+    const date = cell.getAttribute("data-date");
+    const box = cell.querySelector(".calEvents");
+    if (!box) return;
+
+    const items = byDate.get(date) || [];
+    if (!items.length){
+      box.classList.add("muted");
+      box.innerHTML = "—";
+      return;
+    }
+
+    // orden opcional (por estado/nombre)
+    items.sort((a,b) => String(a?.nombre_accion||"").localeCompare(String(b?.nombre_accion||""), "es", { sensitivity:"base" }));
+
+    box.classList.remove("muted");
+    box.innerHTML = items.slice(0, 6).map(renderCalEventPill).join("");
+
+    if (items.length > 6){
+      box.innerHTML += `<div class="muted" style="margin-top:4px;">+${items.length - 6} más</div>`;
+    }
+  });
+
+  // click para editar (reutiliza tu openEdit)
+  document.querySelectorAll('#viewCalendario [data-cal-edit]').forEach(btn => {
+    if (btn.__boundCalEdit) return;
+    btn.__boundCalEdit = true;
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-cal-edit");
+      const row = (Array.isArray(ALL) ? ALL : []).find(x => String(x?.id_accion) === String(id));
+      if (row) openEdit(row);
+    });
+  });
+}
+
+function refreshCalendario() {
+  const st = window.CAL_STATE || { year: new Date().getFullYear(), month: new Date().getMonth() };
+  const year = st.year;
+  const month = st.month;
+
+  // ✅ Buscar el contenedor REAL donde hay que pintar
+  // (tu UI parece tener el mensaje dentro de otro id distinto a calGridDays)
+  const grid =
+    document.getElementById("calGridDays") ||
+    document.getElementById("calGrid") ||
+    document.getElementById("calDays") ||
+    document.querySelector("#viewCalendario [data-cal-days]") ||
+    document.querySelector("#viewCalendario .calGridDays") ||
+    document.querySelector("#viewCalendario .calGrid") ||
+    null;
+
+  const monthLbl = document.getElementById("calMonthLabel");
+  const rangeLbl = document.getElementById("calRangeLabel");
+  const title = document.getElementById("calTitle");
+  const desc = document.getElementById("calDesc");
+
+  if (!grid) {
+    console.warn("Calendario: NO encontré contenedor para días. Probé: calGridDays/calGrid/calDays/[data-cal-days]/.calGridDays/.calGrid");
+    return;
+  }
+
+  const monthName = new Date(year, month, 1).toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+
+  if (monthLbl) monthLbl.textContent = monthName;
+  if (rangeLbl) rangeLbl.textContent = `${year}-${String(month + 1).padStart(2, "0")}`;
+  if (title) title.textContent = "Calendario";
+  if (desc) desc.textContent = `Mostrando acciones del mes ${monthName}.`;
+
+  // Semana Dom..Sáb
+  const firstDay = new Date(year, month, 1);
+  const startDow = firstDay.getDay(); // 0=Dom
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Render 42 celdas (7x6)
+  let html = "";
+
+  for (let i = 0; i < startDow; i++) {
+    html += `<div class="calCell empty"><div class="calDay muted"> </div></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    html += `
+      <div class="calCell" data-date="${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}">
+        <div class="calDay">${d}</div>
+        <div class="calEvents muted">—</div>
+      </div>
+    `;
+  }
+
+  const rendered = startDow + daysInMonth;
+  const remaining = Math.max(0, 42 - rendered); // 6 semanas * 7 días
+  for (let i = 0; i < remaining; i++) {
+    html += `<div class="calCell empty"><div class="calDay muted"> </div></div>`;
+  }
+
+  // ✅ Pintar SI O SI en el contenedor que exista
+  grid.innerHTML = html;
+  // ✅ pintar acciones del mes desde ALL
+  paintCalendarioActions();
+
+  // ✅ Por si el mensaje está en “otro” contenedor viejo, lo limpiamos también
+  const maybeOld = document.getElementById("calGridDays");
+  if (maybeOld && maybeOld !== grid) maybeOld.innerHTML = "";
+}
+/* =========================
+ * MEDICIONES — Dashboard
+ * Requiere HTML (Index.html) con:
+ *  - #med_year, #med_q
+ *  - #btnMedClear, #btnMedRefresh, #btnMedExport
+ *  - KPIs: #medKpiTotal, #medKpiRealizadas, #medKpiDesarrollo, #medKpiIdea, #medKpiPendientes, #medKpiLineas, #medKpiYear
+ *  - Tabla: #medTbody, #medTableDesc, #medLeft, #medRight, #medBuildPill
+ * ========================= */
+
+window.MED_STATE = window.MED_STATE || {
+  initialized: false,
+  year: "",
+  q: "",
+  years: [],
+};
+
+function medYearFromIso_(iso){
+  const s = String(iso || "").trim();
+  const m = s.match(/^(\d{4})-\d{2}-\d{2}/);
+  return m ? m[1] : "";
+}
+
+function medNormState_(st){
+  const s = String(st || "").trim().toUpperCase();
+  if (s === "IDEA") return "IDEA";
+  if (s === "DESARROLLO" || s === "EN DESARROLLO" || s === "EN_DESARROLLO") return "DESARROLLO";
+  if (s === "REALIZADO" || s === "REALIZADA" || s === "REALIZADOS") return "REALIZADO";
+  return "OTRO";
+}
+
+function medLinea_(row){
+  const v = row?.lineaTematica || row?.subeje || row?.linea_tematica || "";
+  const s = String(v || "").trim();
+  return s || "(Sin línea)";
+}
+
+function medBuildYearsFromAll_(){
+  const rows = Array.isArray(ALL) ? ALL : [];
+  const set = new Set();
+  rows.forEach(r => {
+    const y = medYearFromIso_(r?.fecha_accion);
+    if (y) set.add(y);
+  });
+  const years = Array.from(set).sort((a,b)=> Number(b) - Number(a));
+  return years;
+}
+function medYearSelectEl_(){
+  // Tu index usa metricsPeriodFilter
+  return $("metricsPeriodFilter") || $("med_year");
+}
+
+function medFillYearSelect_(years){
+  const sel = medYearSelectEl_();
+  if (!sel) return;
+
+  sel.innerHTML = "";
+  years.forEach(y=>{
+    const o = document.createElement("option");
+    o.value = y;
+    o.textContent = y;
+    sel.appendChild(o);
+  });
+
+  const def = years[0] || "";
+  const want = window.MED_STATE.year || def;
+  sel.value = years.includes(want) ? want : def;
+
+  window.MED_STATE.year = sel.value || def || "";
+}
+
+
+function medCompute_(year, q){
+  const rows = Array.isArray(ALL) ? ALL : [];
+  const yy = String(year || "").trim();
+  const needle = String(q || "").trim().toLowerCase();
+
+  const filtered = rows.filter(r => {
+    const y = medYearFromIso_(r?.fecha_accion);
+    if (yy && y !== yy) return false;
+
+    if (!needle) return true;
+
+    const lt = medLinea_(r);
+    const st = String(r?.estado_accion || "").trim();
+    const hay = `${lt} | ${st}`.toLowerCase();
+    return hay.includes(needle);
+  });
+
+  // KPIs base
+  let total = filtered.length;
+  let idea = 0, desarrollo = 0, realizado = 0, otro = 0;
+
+  // Por línea
+  const byLinea = new Map(); // key => {linea,total,IDEA,DESARROLLO,REALIZADO,OTRO}
+  filtered.forEach(r=>{
+    const st = medNormState_(r?.estado_accion);
+    if (st === "IDEA") idea++;
+    else if (st === "DESARROLLO") desarrollo++;
+    else if (st === "REALIZADO") realizado++;
+    else otro++;
+
+    const linea = medLinea_(r);
+    if (!byLinea.has(linea)){
+      byLinea.set(linea, { linea, total:0, IDEA:0, DESARROLLO:0, REALIZADO:0, OTRO:0 });
+    }
+    const obj = byLinea.get(linea);
+    obj.total++;
+    obj[st] = (obj[st] || 0) + 1;
+  });
+
+  const lineas = Array.from(byLinea.values())
+    .sort((a,b)=> (b.total - a.total) || a.linea.localeCompare(b.linea, "es", { sensitivity:"base" }));
+
+  const pendientes = Math.max(0, total - realizado);
+
+  return {
+    year: yy,
+    q: needle,
+    total, idea, desarrollo, realizado, otro, pendientes,
+    lineasCount: byLinea.size,
+    lineas,
+    filteredCount: filtered.length
+  };
+}
+function medYearOf_(v){
+  if (!v) return null;
+
+  if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v)) {
+    return v.getFullYear();
+  }
+
+  const s = String(v).trim();
+  if (!s) return null;
+
+  const m1 = s.match(/^(\d{4})[-/]/);
+  if (m1) return Number(m1[1]);
+
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m2) return Number(m2[3]);
+
+  const d = new Date(s);
+  if (!isNaN(d)) return d.getFullYear();
+
+  return null;
+}
+
+function medUniqueSorted_(rows, key){
+  const set = new Set();
+  for (const r of (rows || [])){
+    const v = r?.[key];
+    const s = String(v ?? "").trim();
+    if (s) set.add(s);
+  }
+  return Array.from(set).sort((a,b)=>a.localeCompare(b, "es"));
+}
+
+function medFillSelectById_(id, values, current){
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  el.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "(todos)";
+  el.appendChild(optAll);
+
+  (values || []).forEach(v=>{
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    el.appendChild(opt);
+  });
+
+  const keep = String(current ?? "");
+  el.value = (keep && (values || []).includes(keep)) ? keep : "";
+}
+
+function medRefreshDynamicSelectOptions_(){
+  const yearSel = String(document.getElementById("anioFiltro")?.value || "").trim();
+
+  const KEY_FECHA = "Fecha de acción";
+  const KEY_TIPO  = "Tipo de acción";
+  const KEY_EJE   = "Eje de gobierno";
+  const KEY_LINEA = "Línea temática";
+
+  const rowsBase = yearSel
+    ? (ALL || []).filter(r => String(medYearOf_(r?.[KEY_FECHA]) || "") === yearSel)
+    : (ALL || []);
+
+  const tipoVals  = medUniqueSorted_(rowsBase, KEY_TIPO);
+  const ejeVals   = medUniqueSorted_(rowsBase, KEY_EJE);
+  const lineaVals = medUniqueSorted_(rowsBase, KEY_LINEA);
+
+  medFillSelectById_("tipoAccionFiltro", tipoVals,  document.getElementById("tipoAccionFiltro")?.value);
+  medFillSelectById_("ejeGobFiltro",     ejeVals,   document.getElementById("ejeGobFiltro")?.value);
+  medFillSelectById_("lineaTematicaFiltro", lineaVals, document.getElementById("lineaTematicaFiltro")?.value);
+}
+
+function medRender_(data){
+  // pills/build
+  if ($("medBuildPill")) $("medBuildPill").textContent = `Build: ${META?.sheet || "ACCIONES"} • ${ALL?.length || 0}`;
+
+  // KPIs
+  if ($("medKpiYear")) $("medKpiYear").textContent = data.year || "—";
+  if ($("medKpiTotal")) $("medKpiTotal").textContent = String(data.total ?? "—");
+  if ($("medKpiRealizadas")) $("medKpiRealizadas").textContent = String(data.realizado ?? "—");
+  if ($("medKpiDesarrollo")) $("medKpiDesarrollo").textContent = String(data.desarrollo ?? "—");
+  if ($("medKpiIdea")) $("medKpiIdea").textContent = String(data.idea ?? "—");
+  if ($("medKpiPendientes")) $("medKpiPendientes").textContent = String(data.pendientes ?? "—");
+  if ($("medKpiLineas")) $("medKpiLineas").textContent = String(data.lineasCount ?? "—");
+
+  // Descripción
+  if ($("medTableDesc")){
+    const qtxt = String($("med_q")?.value || "").trim();
+    $("medTableDesc").innerHTML = qtxt
+      ? `Año <b>${escapeHtml(data.year || "—")}</b> • filtro: <b>${escapeHtml(qtxt)}</b> • filas: <b>${data.filteredCount}</b>`
+      : `Año <b>${escapeHtml(data.year || "—")}</b> • filas: <b>${data.filteredCount}</b>`;
+  }
+
+  // Tabla
+  const tb = $("medTbody");
+  if (!tb) return;
+
+  if (!data.lineas || !data.lineas.length){
+    tb.innerHTML = `<tr><td class="empty" colspan="6">Sin datos para el filtro seleccionado.</td></tr>`;
+  } else {
+    tb.innerHTML = data.lineas.map(x=>{
+      return `<tr>
+        <td style="text-align:left;"><span class="cellWrap" title="${escapeHtml(x.linea)}">${escapeHtml(x.linea)}</span></td>
+        <td>${x.total}</td>
+        <td>${x.IDEA || 0}</td>
+        <td>${x.DESARROLLO || 0}</td>
+        <td>${x.REALIZADO || 0}</td>
+        <td>${x.OTRO || 0}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  // Footer meta
+  if ($("medLeft")) $("medLeft").textContent = `Líneas: ${data.lineasCount} • Acciones: ${data.total}`;
+  if ($("medRight")) $("medRight").textContent = `Fuente: ${META?.sheet || "ACCIONES"} • lastRow=${META?.lastRow || "—"}`;
+}
+
+function medRefresh_(){
+  const year = String(medYearSelectEl_()?.value || window.MED_STATE.year || "").trim();
+  const q = String($("med_q")?.value || "").trim();
+
+  window.MED_STATE.year = year;
+  window.MED_STATE.q = q;
+
+  const data = medCompute_(year, q);
+  medRender_(data);
+}
+
+function medExportCSV_(){
+  const year = String(medYearSelectEl_()?.value || window.MED_STATE.year || "").trim();
+  const q = String($("med_q")?.value || "").trim();
+  const data = medCompute_(year, q);
+
+
+  const lines = [];
+  lines.push(["Año","Línea temática","Total","Idea","En Desarrollo","Realizado","Otro"].join(","));
+
+  (data.lineas || []).forEach(x=>{
+    const row = [
+      year,
+      `"${String(x.linea).replaceAll('"','""')}"`,
+      x.total,
+      (x.IDEA||0),
+      (x.DESARROLLO||0),
+      (x.REALIZADO||0),
+      (x.OTRO||0),
+    ];
+    lines.push(row.join(","));
+  });
+
+  // KPIs arriba (opcional)
+  lines.push("");
+  lines.push(["KPIs","","","","","",""].join(","));
+  lines.push([`Total`,data.total,"","","","",""].join(","));
+  lines.push([`Realizadas`,data.realizado,"","","","",""].join(","));
+  lines.push([`En desarrollo`,data.desarrollo,"","","","",""].join(","));
+  lines.push([`Idea`,data.idea,"","","","",""].join(","));
+  lines.push([`Pendientes`,data.pendientes,"","","","",""].join(","));
+
+  const csv = lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `RS_Mediciones_${year || "ANIO"}${q ? "_FILTRADO" : ""}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function medExport_(){
+  // Si más adelante agregamos XLSX en Code.gs, esto lo usa.
+  // Si falla, cae a CSV (Excel lo abre perfecto).
+  try{
+    google.script.run
+      .withSuccessHandler((res)=>{
+        // esperado: {ok:true, filename:"...", base64:"..."}
+        if (!res?.ok || !res?.base64) throw new Error(res?.message || "Export inválido");
+
+        const byteChars = atob(res.base64);
+        const byteNums = new Array(byteChars.length);
+        for (let i=0; i<byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([new Uint8Array(byteNums)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = res.filename || "RS_Mediciones.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      })
+      .withFailureHandler((_err)=>{
+        // fallback CSV
+        medExportCSV_();
+      })
+      .exportMedicionesXlsx({
+        year: String($("med_year")?.value || "").trim(),
+        q: String($("med_q")?.value || "").trim()
+      });
+  }catch(_){
+    medExportCSV_();
+  }
+}
+
+function medInitOnce_(){
+  const root = $("viewMediciones");
+  if (!root) return;
+
+  if (window.MED_STATE.initialized) return;
+  window.MED_STATE.initialized = true;
+
+  const selYear = medYearSelectEl_();
+  if (selYear && !selYear.__bound){
+    selYear.__bound = true;
+    selYear.addEventListener("change", medRefresh_);
+  }
+
+  if ($("med_q") && !$("med_q").__bound){
+    $("med_q").__bound = true;
+    $("med_q").addEventListener("input", medRefresh_);
+  }
+
+  if ($("btnMedClear") && !$("btnMedClear").__bound){
+    $("btnMedClear").__bound = true;
+    $("btnMedClear").addEventListener("click", ()=>{
+      if ($("med_q")) $("med_q").value = "";
+      medRefresh_();
+    });
+  }
+
+  if ($("btnMedRefresh") && !$("btnMedRefresh").__bound){
+    $("btnMedRefresh").__bound = true;
+    $("btnMedRefresh").addEventListener("click", medRefresh_);
+  }
+
+  if ($("btnMedExport") && !$("btnMedExport").__bound){
+    $("btnMedExport").__bound = true;
+    $("btnMedExport").addEventListener("click", medExport_);
+  }
+}
+
+function ensureAllLoaded_(cb){
+  cb = (typeof cb === "function") ? cb : ()=>{};
+
+  // ya tengo datos
+  if (Array.isArray(ALL) && ALL.length) { cb(); return; }
+
+  // evita pedir 20 veces si el usuario cambia de tab rápido
+  window.__ALL_LOADING__ = window.__ALL_LOADING__ || { loading:false, queue:[] };
+
+  if (window.__ALL_LOADING__.loading){
+    window.__ALL_LOADING__.queue.push(cb);
+    return;
+  }
+
+  window.__ALL_LOADING__.loading = true;
+  window.__ALL_LOADING__.queue.push(cb);
+
+  // misma fuente que usa Acciones: listAcciones()
+  google.script.run
+    .withSuccessHandler((res)=>{
+      try{
+        if (!res || !res.ok) throw new Error("Respuesta inválida");
+
+        ALL = res.rows || [];
+        META = res.meta || null;
+
+        // refresca cosas dependientes de ALL (sin romper nada)
+        try { buildAccionesYearOptionsFromAll_(); } catch(_){}
+        try { buildAccionesFilterOptions_(); } catch(_){}
+
+        // si estás en acciones, recalcula tabla/meta
+        try { applyFilters(); } catch(_){}
+
+        // procesa cola
+        const q = window.__ALL_LOADING__.queue.splice(0);
+        q.forEach(fn => { try{ fn(); }catch(_){} });
+      }catch(e){
+        console.warn("ensureAllLoaded_ error:", e);
+        const q = window.__ALL_LOADING__.queue.splice(0);
+        q.forEach(fn => { try{ fn(); }catch(_){} });
+      }finally{
+        window.__ALL_LOADING__.loading = false;
+      }
+    })
+    .withFailureHandler((err)=>{
+      console.warn("ensureAllLoaded_ failure:", err?.message || err);
+      const q = (window.__ALL_LOADING__?.queue || []).splice(0);
+      q.forEach(fn => { try{ fn(); }catch(_){} });
+      if (window.__ALL_LOADING__) window.__ALL_LOADING__.loading = false;
+    })
+    .listAcciones();
+}
+
+// ✅ Entry-point de la vista Mediciones (lo llama setTab("mediciones"))
+window.loadMediciones = function(){
+  // 1) bind de eventos (una sola vez)
+  medInitOnce_();
+
+  // 2) asegurá que ALL esté cargado
+  ensureAllLoaded_(()=>{
+    // 3) años disponibles desde ALL
+    const years = medBuildYearsFromAll_();
+    if (!years.length){
+      // sin data
+      if ($("medKpiYear")) $("medKpiYear").textContent = "—";
+      if ($("medKpiTotal")) $("medKpiTotal").textContent = "0";
+      if ($("medTbody")) $("medTbody").innerHTML = `<tr><td class="empty" colspan="6">Sin datos.</td></tr>`;
+      if ($("medLeft")) $("medLeft").textContent = "—";
+      if ($("medRight")) $("medRight").textContent = "—";
+      return;
+    }
+
+    // 4) llenar selector (usa metricsPeriodFilter si existe)
+    medFillYearSelect_(years);
+
+    // 5) render
+    medRefresh_();
+  });
+};
+
+
+function loadMediciones(){
+  medInitOnce_();
+
+  ensureAllLoaded_(()=>{
+    const years = medBuildYearsFromAll_();
+    window.MED_STATE.years = years;
+
+    medFillYearSelect_(years);
+
+    // Render mínimo garantizado: cantidad de acciones
+    if ($("medKpiTotal")) $("medKpiTotal").textContent = String((ALL||[]).length);
+
+    if ($("medBuildPill")) $("medBuildPill").textContent =
+      `Build: ${META?.sheet || "ACCIONES"} • ${(ALL||[]).length}`;
+
+    medRefresh_();
+  });
+}
+
+// =========================
+// Init (1 sola vez)
+// =========================
+window.addEventListener("load", () => {
+  initFiltersRefs_();
+  // Tabs
+  if ($("tabAcciones") && !$("tabAcciones").__bound){
+    $("tabAcciones").__bound = true;
+    $("tabAcciones").addEventListener("click", ()=> setTab("acciones"));
+  }
+
+  const tCarga = $("tabCarga");
+  if (tCarga && !tCarga.__bound){
+    tCarga.__bound = true;
+    tCarga.addEventListener("click", ()=> openCreate({ switchTab:true }));
+  }
+
+  if ($("tabAdmin") && !$("tabAdmin").__bound){
+    $("tabAdmin").__bound = true;
+    $("tabAdmin").addEventListener("click", ()=> setTab("admin"));
+  }
+
+  if ($("tabMediciones") && !$("tabMediciones").__bound){
+    $("tabMediciones").__bound = true;
+    $("tabMediciones").addEventListener("click", ()=> setTab("mediciones"));
+  }
+
+  if ($("tabTableroEntidades") && !$("tabTableroEntidades").__bound){
+    $("tabTableroEntidades").__bound = true;
+    $("tabTableroEntidades").addEventListener("click", ()=> setTab("entidades"));
+  }
+
+  if ($("tabCalendario") && !$("tabCalendario").__bound){
+    $("tabCalendario").__bound = true;
+    $("tabCalendario").addEventListener("click", ()=> setTab("calendario"));
+  }
+if ($("btnExport") && !$("btnExport").__bound){
+  $("btnExport").__bound = true;
+  $("btnExport").addEventListener("click", exportFilteredAccionesXLSX);
+}
+
+  // Admin refresh buttons
+  ["btnAdminRefresh2","btnAdminRefresh"].forEach((id)=>{
+    const b = $(id);
+    if (b && !b.__bound){
+      b.__bound = true;
+      b.addEventListener("click", ()=>{
+        adminRefreshCurrent();
+        adminSetStatus("Admin refrescado");
+      });
+    }
+  });
+
+  // Cambio de módulo Admin
+  const modSel = $("adm_module");
+  if (modSel && !modSel.__bound){
+    modSel.__bound = true;
+    modSel.addEventListener("change", ()=>{
+      const m = String(modSel.value || "").trim();
+      adminShowModule(m);
+      adminRefreshCurrent();
+    });
+  }
+
+  // Botones principales
+  if ($("btnRefresh") && !$("btnRefresh").__bound){
+    $("btnRefresh").__bound = true;
+    $("btnRefresh").addEventListener("click", loadData);
+  }
+
+  if ($("btnCreate") && !$("btnCreate").__bound){
+    $("btnCreate").__bound = true;
+    $("btnCreate").addEventListener("click", ()=> openCreate({ switchTab:true }));
+  }
+
+if ($("btnClear") && !$("btnClear").__bound){
+  $("btnClear").__bound = true;
+  $("btnClear").addEventListener("click", ()=>{
+    if (FILTERS.acciones.q) FILTERS.acciones.q.value = "";
+    if (FILTERS.acciones.estado) FILTERS.acciones.estado.value = "";
+    if (FILTERS.acciones.year) FILTERS.acciones.year.value = "";
+
+    setSegmentValue_(FILTERS.acciones.segTipo, "");
+    setSegmentValue_(FILTERS.acciones.segEje, "");
+    setSegmentValue_(FILTERS.acciones.segLinea, "");
+
+    applyFilters();
+  });
+}
+
+
+  // Filtros acciones
+  if ($("q") && !$("q").__bound){
+    $("q").__bound = true;
+    $("q").addEventListener("input", applyFilters);
+  }
+  if ($("estadoFiltro") && !$("estadoFiltro").__bound){
+    $("estadoFiltro").__bound = true;
+    $("estadoFiltro").addEventListener("change", applyFilters);
+  }
+// ✅ Filtros nuevos Acciones (si existen en tu HTML)
+["tipoAccionFiltro","tipoFiltro","tipo_accionFiltro",
+ "ejeFiltro","ejeGobFiltro","eje_gobiernoFiltro",
+ "lineaTematicaFiltro","lineaFiltro","linea_tematicaFiltro","subejeFiltro",
+ "anioFiltro","yearFiltro","accionesYear","acciones_anio"
+].forEach(id=>{
+  const el = document.getElementById(id);
+  if (el && !el.__bound){
+    el.__bound = true;
+    el.addEventListener("change", applyFilters);
+  }
+});
+
+  // Edit modal
+  if ($("btnClose") && !$("btnClose").__bound){
+    $("btnClose").__bound = true;
+    $("btnClose").addEventListener("click", closeEdit);
+  }
+  if ($("editBack") && !$("editBack").__bound){
+    $("editBack").__bound = true;
+    $("editBack").addEventListener("click", (e)=>{ if (e.target === $("editBack")) closeEdit(); });
+  }
+  if ($("btnSave") && !$("btnSave").__bound){
+    $("btnSave").__bound = true;
+    $("btnSave").addEventListener("click", saveEdit);
+  }
+
+  // Sanitizar impacto (edit)
+  if ($("f_impacto_numerico") && !$("f_impacto_numerico").__bound){
+    $("f_impacto_numerico").__bound = true;
+    $("f_impacto_numerico").addEventListener("input", (e)=>{
+      e.target.value = String(e.target.value).replace(/[eE\+\-]/g,"");
+    });
+  }
+
+  attachDatePicker();
+
+  // Create
+  if ($("btnCreateClose") && !$("btnCreateClose").__bound){
+    $("btnCreateClose").__bound = true;
+    $("btnCreateClose").addEventListener("click", closeCreate);
+  }
+  if ($("btnCreateSave") && !$("btnCreateSave").__bound){
+    $("btnCreateSave").__bound = true;
+    $("btnCreateSave").addEventListener("click", saveCreate);
+  }
+
+  // Sanitizar impacto (create)
+  if ($("c_impacto_numerico") && !$("c_impacto_numerico").__bound){
+    $("c_impacto_numerico").__bound = true;
+    $("c_impacto_numerico").addEventListener("input", (e)=>{
+      e.target.value = String(e.target.value).replace(/[eE\+\-]/g,"");
+    });
+  }
+
+  attachCreateDatePicker();
+
+  // =========================
+  // ✅ Entidades: bindings (Tipo + filtros) — adentro del load
+  // =========================
+  const entKind = $("entKind");
+  if (entKind && !entKind.__bound){
+    entKind.__bound = true;
+    entKind.addEventListener("change", ()=>{
+      if ($("entSector")) $("entSector").value = "";
+      if ($("entRubro"))  $("entRubro").value = "";
+      if ($("entComuna")) $("entComuna").value = "";
+      loadEntidades();
+    });
+  }
+
+  const entQ = $("entQ");
+  if (entQ && !entQ.__bound){
+    entQ.__bound = true;
+    entQ.addEventListener("input", loadEntidades);
+  }
+
+  ["entSector","entRubro","entComuna"].forEach(id=>{
+    const el = $(id);
+    if (el && !el.__bound){
+      el.__bound = true;
+      el.addEventListener("change", loadEntidades);
+    }
+  });
+
+  // Admin acciones (botones sueltos)
+  if ($("adm_add_area") && !$("adm_add_area").__bound){
+    $("adm_add_area").__bound = true;
+    $("adm_add_area").addEventListener("click", adminCreateArea);
+  }
+  if ($("adm_preview_entes") && !$("adm_preview_entes").__bound){
+    $("adm_preview_entes").__bound = true;
+    $("adm_preview_entes").addEventListener("click", adminPreviewEntes);
+  }
+  if ($("adm_add_ente") && !$("adm_add_ente").__bound){
+    $("adm_add_ente").__bound = true;
+    $("adm_add_ente").addEventListener("click", adminCreateEnte);
+  }
+  if ($("adm_add_persona") && !$("adm_add_persona").__bound){
+    $("adm_add_persona").__bound = true;
+    $("adm_add_persona").addEventListener("click", adminCreatePersona);
+  }
+
+  // Enter shortcuts
+  if ($("adm_area_nombre") && !$("adm_area_nombre").__bound){
+    $("adm_area_nombre").__bound = true;
+    $("adm_area_nombre").addEventListener("keydown", (e)=>{ if (e.key === "Enter") adminCreateArea(); });
+  }
+  if ($("adm_ente_nombre") && !$("adm_ente_nombre").__bound){
+    $("adm_ente_nombre").__bound = true;
+    $("adm_ente_nombre").addEventListener("keydown", (e)=>{ if (e.key === "Enter") adminCreateEnte(); });
+  }
+  if ($("adm_per_nombre") && !$("adm_per_nombre").__bound){
+    $("adm_per_nombre").__bound = true;
+    $("adm_per_nombre").addEventListener("keydown", (e)=>{ if (e.key === "Enter") adminCreatePersona(); });
+  }
+
+  // Arranque
+  loadBootstrap(false);
+  setTab("acciones");
+});
+// =========================
+// (Opcional) Extra seguro: Forzar init Calendario al abrir tab
+// =========================
+(function wireCalendarioTab(){
+  function safeInitCal(){
+    try {
+      if (typeof window.loadCalendario === "function") {
+        window.loadCalendario();
+      } else {
+        console.warn("Calendario: loadCalendario() no existe.");
+      }
+    } catch (e) {
+      console.error("Error init calendario:", e);
+      alert("Error Calendario: " + (e && e.message ? e.message : e));
+    }
+  }
+
+  document.addEventListener("click", function(ev){
+    const t = ev.target;
+    if (!t) return;
+
+    if (t.id === "tabCalendario") {
+      // deja que setTab muestre la vista primero, y luego inicializá
+      setTimeout(safeInitCal, 0);
+    }
+  });
+})();
+function exportAccionesXlsx(payload){
+  payload = payload || {};
+  const header = Array.isArray(payload.header) ? payload.header : [];
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
+  const sheetName = String(payload.sheetName || "Tablero").slice(0, 90);
+
+  if (!header.length) throw new Error("exportAccionesXlsx: header vacío.");
+
+  // 1) Spreadsheet temporal
+  const tmp = SpreadsheetApp.create(`TMP_EXPORT_${new Date().toISOString().slice(0,10)}`);
+  const ss = SpreadsheetApp.openById(tmp.getId());
+  const sh = ss.getSheets()[0];
+  sh.setName(sheetName);
+
+  // 2) Escribir data
+  sh.getRange(1, 1, 1, header.length).setValues([header]);
+
+  if (rows.length){
+    // normalizar a strings (evita errores por null/undefined)
+    const clean = rows.map(r => header.map((_, i) => {
+      const v = (r && r[i] !== undefined && r[i] !== null) ? r[i] : "";
+      return String(v);
+    }));
+    sh.getRange(2, 1, clean.length, header.length).setValues(clean);
+  }
+
+  // 3) Estilo mínimo
+  sh.getRange(1,1,1,header.length).setFontWeight("bold");
+  sh.setFrozenRows(1);
+  try { sh.autoResizeColumns(1, header.length); } catch(e){}
+
+  // 4) Exportar como XLSX
+  const fileId = ss.getId();
+  const xlsxBlob = DriveApp.getFileById(fileId).getBlob()
+    .getAs(MimeType.MICROSOFT_EXCEL)
+    .setName(makeExportFilename_(payload));
+
+  // 5) Base64 para el frontend
+  const base64 = Utilities.base64Encode(xlsxBlob.getBytes());
+
+  // 6) Limpieza (opcional pero recomendado)
+  try { DriveApp.getFileById(fileId).setTrashed(true); } catch(e){}
+
+  return {
+    base64,
+    filename: xlsxBlob.getName()
+  };
+}
+
+function makeExportFilename_(payload){
+  const meta = payload && payload.meta ? payload.meta : {};
+  const ymd = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+
+  const estado = (meta.estado || "").toString().trim();
+  const q = (meta.q || "").toString().trim();
+
+  const safe = (s) => s
+    .replace(/[^\w]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 30);
+
+  const parts = [`RS_TableroAcciones`, ymd];
+  if (estado) parts.push(`estado_${safe(estado)}`);
+  if (q) parts.push(`q_${safe(q)}`);
+
+  return parts.join("__") + ".xlsx";
+}
+document.addEventListener("DOMContentLoaded", () => {
+  // Bootstrap inicial
+  loadBootstrap(false);
+
+  // Botones top (si existen)
+  const bRef = $("btnRefresh");
+  if (bRef && !bRef.__bound){
+    bRef.__bound = true;
+    bRef.addEventListener("click", loadData);
+  }
+
+  const bExp = $("btnExport");
+  if (bExp && !bExp.__bound){
+    bExp.__bound = true;
+    bExp.addEventListener("click", exportFilteredAccionesXLSX);
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+  loadBootstrap(false);
+
+  // ✅ PRUEBA: forzar opciones en Eje de gobierno
+  setTimeout(debugFillEjeGobOptions_, 400);
+});
+
+});
+
+</script>

@@ -1,0 +1,2134 @@
+<style>
+/* =========================================================
+   RS • Acciones — LIGHT THEME (GCBA) v2
+   - Tokenizado con CSS variables
+   - Misma estructura/clases (layout intacto)
+   - Look más institucional + moderno (más contraste)
+   ========================================================= */
+
+/* Archivo (tipografía GCBA) */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800;900&display=swap');
+
+:root{
+  /* GCBA brand */
+  --gcba-blue:#153244;
+  --gcba-yellow:#FFCC00;
+  --gcba-cyan:#8DE2D6;
+  --gcba-gray:#3C3C3B;
+  --gcba-offwhite:#FCFCFC;
+
+  /* Typography */
+  --font:"Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+
+  /* Radius */
+  --radius:18px;
+  --radius-sm:14px;
+}
+
+/* =========================
+   THEME: LIGHT (default) — v2
+   ========================= */
+:root,
+html[data-theme="light"],
+body[data-theme="light"]{
+  /* Background + surfaces (más contraste, menos “lavado”) */
+  --bg: #FCFCFC;              /* OFF-WHITE GCBA */
+  --surface:#FFFFFF;
+  --surface-2:#F3F7F9;        /* headers/paneles */
+  --surface-3:#ECF4F3;        /* cyan-tint sutil */
+
+  /* Text */
+  --text: var(--gcba-blue);   /* Azul oscuro GCBA */
+  --muted: rgba(60,60,59,.86);
+  --muted-2: rgba(60,60,59,.62);
+
+  /* Borders (más definidos) */
+  --line: rgba(21,50,68,.14);
+  --line-2: rgba(21,50,68,.22);
+
+  /* Shadows (más nítidas) */
+  --shadow: 0 14px 34px rgba(21,50,68,.12);
+  --shadow-soft: 0 10px 24px rgba(21,50,68,.10);
+
+  /* Brand accents */
+  --brand: var(--gcba-blue);
+  --accent: var(--gcba-cyan);
+  --cta: var(--gcba-yellow);
+
+  /* States */
+  --good:#16A34A;
+  --warn:#F59E0B;
+  --bad:#EF4444;
+  --neutral:#94A3B8;
+  --info:#0EA5E9;
+
+  /* Focus ring (accesible) */
+  --focus: rgba(141,226,214,.55);
+
+  /* Scrollbar */
+  --scrollbar: rgba(21,50,68,.28);
+}
+
+/* (Opcional futuro) theme dark placeholder */
+html[data-theme="dark"],
+body[data-theme="dark"]{
+  /* Podés definir tokens dark acá cuando quieras */
+}
+
+/* =========================
+   Base
+   ========================= */
+*{ box-sizing:border-box; }
+html, body{ height:100%; }
+
+body{
+  margin:0;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(900px 360px at 18% 0%, rgba(141,226,214,.18), transparent 58%),
+    var(--bg);
+}
+
+/* Scrollbars */
+*::-webkit-scrollbar{ height: 10px; width: 10px; }
+*::-webkit-scrollbar-track{
+  background: rgba(21,50,68,.06);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb{
+  background: var(--scrollbar);
+  border: 1px solid rgba(21,50,68,.10);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover{ background: rgba(21,50,68,.36); }
+
+.wrap{
+  max-width: 1480px;
+  margin: 28px auto;
+  padding: 0 18px 40px;
+}
+
+/* =========================
+   Topbar
+   ========================= */
+.topbar{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 18px;
+  padding: 16px 18px;
+
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #FFFFFF, #FBFDFD);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.brand{ display:flex; flex-direction:column; gap:6px; }
+.brand .title{
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing:.2px;
+  color: var(--text);
+}
+.brand .sub{
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.controls{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+/* =========================
+   Buttons (pill)
+   ========================= */
+.btn{
+  appearance:none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor:pointer;
+  font-weight: 900;
+  transition: transform .06s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease, filter .2s ease;
+  user-select:none;
+}
+.btn:hover{
+  background: var(--surface-2);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-soft);
+}
+.btn:active{ transform: scale(.98); }
+
+.btn:focus-visible{
+  outline:none;
+  box-shadow: 0 0 0 4px var(--focus);
+}
+
+/* Primario (brand) */
+.btn.primary{
+  background: var(--brand);
+  color: #fff;
+  border-color: rgba(21,50,68,.34);
+}
+.btn.primary:hover{
+  filter: brightness(.96);
+  box-shadow: var(--shadow);
+}
+
+/* Ghost (tabs / acciones menores) */
+.btn.ghost{
+  background: transparent;
+  border-color: transparent;
+  color: var(--brand);
+}
+.btn.ghost:hover{
+  background: rgba(21,50,68,.06);
+  border-color: rgba(21,50,68,.10);
+}
+
+/* Tab activo (pill cyan + glow sutil) */
+.btn.active{
+  background: rgba(141,226,214,.30);
+  border-color: rgba(141,226,214,.85);
+  color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(141,226,214,.18);
+}
+
+/* (Opcional) CTA amarillo: usarlo solo donde realmente sea CTA */
+.btn.cta{
+  background: var(--cta);
+  color: var(--brand);
+  border-color: rgba(21,50,68,.22);
+}
+.btn.cta:hover{
+  filter: brightness(.98);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  transform:none;
+  filter:none;
+  box-shadow:none;
+}
+
+/* =========================
+   Panels / Cards
+   ========================= */
+.panel{
+  margin-top: 18px;
+  padding: 18px;
+
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.panel h2{
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: rgba(21,50,68,.86);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 900;
+}
+
+/* Titles / helpers */
+.muted{ color: var(--muted); }
+.hint{
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-weight: 600;
+}
+label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+/* =========================
+   Inputs / Select / Textarea
+   ========================= */
+.input, select, textarea{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  outline:none;
+  transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+  box-shadow: none;
+}
+
+textarea{ min-height: 110px; resize: vertical; }
+
+.input::placeholder, textarea::placeholder{
+  color: var(--muted-2);
+}
+
+/* Focus accesible */
+.input:focus, select:focus, textarea:focus{
+  border-color: rgba(141,226,214,.95);
+  box-shadow: 0 0 0 4px var(--focus);
+}
+
+/* Disabled */
+.input[disabled], select[disabled], textarea[disabled]{
+  opacity:.75;
+  cursor:not-allowed;
+  background: rgba(21,50,68,.04);
+}
+
+/* Select arrow visible (sin librerías) */
+select{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  padding-right: 38px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(21,50,68,.75) 50%),
+    linear-gradient(135deg, rgba(21,50,68,.75) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat:no-repeat;
+}
+
+/* Number input */
+input[type="number"]{
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* =========================
+   Listado Acciones — header + filtros
+   ========================= */
+.listHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.listTitle{ margin:0; }
+
+.filters{
+  display:grid;
+  grid-template-columns: 1.2fr 0.5fr auto;
+  gap: 12px;
+  align-items:end;
+}
+.listFilters{
+  display:grid;
+  grid-template-columns: 1.4fr 0.6fr auto;
+  gap:12px;
+  align-items:end;
+}
+.filtersActions{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  align-items:flex-end;
+}
+
+/* =========================
+   Table
+   ========================= */
+.tableWrap{
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow:hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.scrollX{
+  overflow:auto;
+  max-height: 68vh;
+  position: relative;
+}
+
+table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 1750px;
+}
+
+thead th{
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  text-align:left;
+  padding: 11px 10px;
+
+  background: var(--surface-2);
+  color: var(--brand);
+
+  border-bottom: 2px solid rgba(141,226,214,.55);
+  white-space: nowrap;
+  font-weight: 900;
+  letter-spacing:.25px;
+}
+
+tbody td{
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(21,50,68,.10);
+  white-space: nowrap;
+  vertical-align: top;
+  color: rgba(21,50,68,.92);
+}
+
+/* Zebra suave */
+tbody tr:nth-child(even){
+  background: rgba(21,50,68,.015);
+}
+tbody tr:hover{
+  background: rgba(141,226,214,.16);
+}
+
+.cellWrap{
+  max-width: 420px;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footerMeta{
+  margin-top: 10px;
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  flex-wrap:wrap;
+}
+.empty{ padding: 18px; color: var(--muted); }
+
+/* =========================
+   Estado chip + LED
+   ========================= */
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(21,50,68,.14);
+  background: rgba(21,50,68,.03);
+  font-weight: 900;
+  color: var(--brand);
+}
+
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background: var(--neutral);
+  box-shadow: 0 0 0 3px rgba(21,50,68,.09);
+}
+
+/* Mapping estados (mantenés tus clases existentes) */
+.state-IDEA{
+  background: rgba(245,158,11,.14);
+  border-color: rgba(245,158,11,.26);
+  color: #7C4A03;
+}
+.state-IDEA .dot{ background: var(--warn); }
+
+.state-DESARROLLO{
+  background: rgba(141,226,214,.20);
+  border-color: rgba(141,226,214,.52);
+  color: var(--brand);
+}
+.state-DESARROLLO .dot{ background: var(--accent); }
+
+.state-REALIZADO{
+  background: rgba(22,163,74,.12);
+  border-color: rgba(22,163,74,.24);
+  color: #0F5B2D;
+}
+.state-REALIZADO .dot{ background: var(--good); }
+
+.state-CANCELADO{
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.25);
+  color: #7F1D1D;
+}
+.state-CANCELADO .dot{ background: var(--bad); }
+
+/* =========================
+   Participantes pills
+   ========================= */
+.pillList{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  max-width: 560px;
+  white-space: normal;
+}
+
+.pill{
+  display:inline-flex;
+  gap:6px;
+  align-items:center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(21,50,68,.14);
+  background: rgba(21,50,68,.04);
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--brand);
+}
+.pill .mini{
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+/* =========================
+   Modal
+   ========================= */
+.modalBack{
+  position: fixed;
+  inset:0;
+  background: rgba(21,50,68,.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  z-index: 50;
+}
+
+.modal{
+  width: min(1120px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+
+.modalHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.modalTitle{
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--brand);
+}
+
+.modalBody{
+  padding: 14px;
+  max-height: 78vh;
+  overflow:auto;
+}
+
+.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid1{ display:grid; grid-template-columns: 1fr; gap: 12px; }
+
+.rowBtns{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.section{
+  border:1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(21,50,68,.02);
+}
+.sectionTitle{
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: rgba(21,50,68,.86);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.sectionDisabled{
+  opacity: .55;
+  filter: saturate(.85);
+}
+
+/* =========================
+   Row inline (participantes add)
+   ========================= */
+.rowInline{
+  display:grid;
+  grid-template-columns: 1fr 190px auto;
+  gap: 10px;
+  align-items:center;
+}
+/* =========================
+   Chips participantes (FIX layout)
+   ========================= */
+.chips{
+  margin-top: 10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+/* Chip compacto tipo "pill" con grilla */
+.chipX{
+  display:grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto; /* Nombre | Estado | Quitar */
+  align-items:center;
+  gap:10px;
+
+  border:1px solid var(--line);
+  background: rgba(21,50,68,.04);
+  padding: 8px 10px;
+  border-radius: 999px;
+
+  /* clave para que NO ocupe toda la fila */
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* Nombre: elipsis, pero sin empujar todo */
+.chipX .name{
+  font-weight: 900;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width: 220px;
+  max-width: 520px;
+}
+
+/* Si tenés algún texto secundario dentro */
+.chipX .mini{ color: var(--muted); font-weight:700; }
+
+
+/* Select dentro de chips (estado invitación) */
+.statusSel{
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+
+  padding: 10px 36px 10px 14px;
+  font-weight: 800;
+  font-size: 12px;
+
+  cursor: pointer;
+  outline: none;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(21,50,68,.75) 50%),
+    linear-gradient(135deg, rgba(21,50,68,.75) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+
+  transition:
+    border-color .15s ease,
+    box-shadow .15s ease,
+    background-color .15s ease;
+  min-width: 160px;
+}
+.statusSel:hover{
+  background-color: rgba(21,50,68,.04);
+  border-color: var(--line-2);
+}
+.statusSel:focus{
+  border-color: rgba(141,226,214,.95);
+  box-shadow: 0 0 0 4px var(--focus);
+}
+.statusSel option{
+  background: #ffffff;
+  color: var(--text);
+}
+
+/* Date hidden input */
+.dateHidden{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+  width:1px; height:1px;
+  left:-9999px; top:-9999px;
+}
+
+/* =========================
+   Combobox (App.html createCombo)
+   ========================= */
+.combo{ position: relative; width: 100%; }
+
+.comboInput{
+  width:100%;
+  padding: 12px 38px 12px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  outline:none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.comboInput:focus{
+  border-color: rgba(141,226,214,.95);
+  box-shadow: 0 0 0 4px var(--focus);
+}
+.comboInput[disabled]{ opacity:.75; cursor:not-allowed; background: rgba(21,50,68,.04); }
+
+.comboIcon{
+  position:absolute;
+  top:50%;
+  right:12px;
+  transform: translateY(-50%);
+  opacity:.75;
+  pointer-events:none;
+  font-size: 12px;
+  color: rgba(21,50,68,.85);
+}
+
+.comboMenu{
+  position:absolute;
+  left:0; right:0;
+  top: calc(100% + 6px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  display:none;
+  z-index: 9999;
+}
+.comboMenu.open{ display:block; }
+
+.comboMenuHeader{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  background: var(--surface-2);
+}
+.comboMenuHeader .mini{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.comboActions{ display:flex; gap:10px; align-items:center; }
+
+.comboClear{
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor:pointer;
+  font-weight: 900;
+}
+.comboClear:hover{
+  border-color: var(--line-2);
+  background: rgba(21,50,68,.04);
+}
+.comboClear[disabled]{ opacity:.6; cursor:not-allowed; }
+
+.comboList{
+  max-height: 260px;
+  overflow:auto;
+  padding: 6px;
+}
+.comboItem{
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  border: 1px solid transparent;
+  user-select:none;
+}
+.comboItem:hover{
+  background: rgba(141,226,214,.16);
+  border-color: rgba(141,226,214,.35);
+}
+.comboItem .right{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-shrink:0;
+}
+.comboItem .tag{
+  font-size: 11px;
+  color: rgba(21,50,68,.95);
+  border: 1px solid rgba(141,226,214,.60);
+  background: rgba(141,226,214,.20);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space:nowrap;
+}
+.comboItem .subtag{
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid rgba(21,50,68,.14);
+  background: rgba(21,50,68,.04);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space:nowrap;
+}
+.comboEmpty{
+  padding: 12px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* =========================
+   ADMIN (mantiene tu estructura)
+   ========================= */
+.adminShell{ padding: 18px; }
+
+.adminHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.adminKicker{
+  font-size: 12px;
+  color: rgba(21,50,68,.78);
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.adminTitle{
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  margin: 0;
+}
+.adminSub{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.adminBuildPill{
+  display:inline-flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(21,50,68,.04);
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--brand);
+}
+
+.adminTopControls{
+  display:flex;
+  gap: 12px;
+  align-items:flex-end;
+  margin-bottom: 14px;
+}
+.adminControl{ flex: 1; }
+
+.adminCard{
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.adminCardHead{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  align-items:center;
+}
+.adminCardTitle{
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: .2px;
+}
+.adminTag{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(141,226,214,.75);
+  background: rgba(141,226,214,.22);
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--brand);
+  white-space: nowrap;
+}
+.adminCardDesc{
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.adminFormGrid2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items:end;
+}
+.adminRight{ align-self:end; }
+
+.adminActions{
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  flex-wrap:wrap;
+  margin-top: 14px;
+}
+
+.adminMini{
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow:hidden;
+  background: var(--surface);
+}
+.adminMiniHead{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--brand);
+  font-weight: 900;
+  font-size: 12px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  background: var(--surface-2);
+}
+.adminMiniBody{
+  max-height: 260px;
+  overflow:auto;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 12px;
+}
+.adminRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(21,50,68,.10);
+  border-radius: 14px;
+  background: rgba(21,50,68,.03);
+  margin-bottom: 8px;
+}
+.adminRow:last-child{ margin-bottom: 0; }
+.adminRow .id{
+  color: rgba(21,50,68,.75);
+  font-weight: 900;
+  min-width: 78px;
+}
+.adminRow .name{
+  font-weight: 900;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Admin: layout prolijo en Validaciones */
+.adminValidGrid{ align-items: start; }
+.adminField label{ display:block; margin-bottom:8px; }
+
+.adminInline{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+.adminInline .input{
+  flex:1;
+  min-width: 280px;
+}
+.adminBtns{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  white-space:nowrap;
+}
+
+/* Select del Admin (antes .selectDark) ahora light */
+.selectDark{
+  width:100%;
+  height:44px;
+  padding:10px 44px 10px 14px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  outline:none;
+
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23153244' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  background-size:18px 18px;
+}
+.selectDark:focus{
+  border-color: rgba(141,226,214,.95);
+  box-shadow: 0 0 0 4px var(--focus);
+}
+.selectDark option{
+  background:#ffffff;
+  color: var(--text);
+}
+
+/* =========================
+   Toast
+   ========================= */
+.toast{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  max-width: 460px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.96);
+  display: none;
+  z-index: 9999;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.toast.ok{ border-color: rgba(22,163,74,.35); }
+.toast.bad{ border-color: rgba(239,68,68,.35); }
+
+/* =========================
+   Responsive
+   ========================= */
+@media (max-width: 980px){
+  .adminInline{ flex-direction:column; align-items:stretch; }
+  .adminBtns{ width:100%; }
+  .adminBtns .btn{ width:100%; }
+}
+
+@media (max-width: 900px){
+  .filters{ grid-template-columns: 1fr; }
+  .listFilters{ grid-template-columns: 1fr; }
+  .filtersActions{ align-items:stretch; }
+  .filtersActions .btn{ width:100%; }
+
+  table{ min-width: 1400px; }
+  .grid2, .grid3{ grid-template-columns: 1fr; }
+  .controls{ justify-content:flex-start; }
+  .rowInline{ grid-template-columns: 1fr; }
+
+  .adminHeader{ flex-direction:column; align-items:flex-start; }
+  .adminTopControls{ flex-direction:column; align-items:stretch; }
+  .adminFormGrid2{ grid-template-columns: 1fr; }
+}
+/* =========================================
+   Espaciado vertical de formularios (GCBA)
+   - Evita que labels queden pegados al campo anterior
+   ========================================= */
+
+/* 1) Separación entre “bloques de campo” (divs dentro de sections) */
+.section > div{ 
+  margin-bottom: 14px;
+}
+.section > div:last-child{
+  margin-bottom: 0;
+}
+
+/* 2) Grillas: más aire entre filas y columnas */
+.grid1{ row-gap: 14px; }
+.grid2{ row-gap: 14px; column-gap: 12px; }
+.grid3{ row-gap: 14px; column-gap: 12px; }
+
+/* 3) Labels un poquito más respirados */
+label{
+  margin-top: 2px;
+  margin-bottom: 8px; /* antes 6px */
+  line-height: 1.2;
+}
+
+/* 4) Títulos de sección + primer campo: separá un toque */
+.sectionTitle{
+  margin-bottom: 12px;
+}
+/* =========================================================
+   TABLERO ENTIDADES — Addon CSS
+   (Pegar al final de tu <style>)
+   ========================================================= */
+
+/* Contenedor general del tablero */
+.tableroEntidades{
+  display: grid;
+  gap: 14px;
+}
+
+/* Header del tablero (título + acciones) */
+.tableroHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tableroHeader .title{
+  margin:0;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: var(--brand);
+}
+.tableroHeader .sub{
+  margin:0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Grid de KPIs / cards */
+.kpiGrid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+
+/* Card base */
+.kpiCard{
+  grid-column: span 3;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  padding: 14px;
+  min-height: 96px;
+
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Variantes de ancho */
+.kpiCard.span4{ grid-column: span 4; }
+.kpiCard.span6{ grid-column: span 6; }
+.kpiCard.span8{ grid-column: span 8; }
+.kpiCard.span12{ grid-column: span 12; }
+
+/* Encabezado de card */
+.kpiHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+}
+.kpiLabel{
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: rgba(21,50,68,.78);
+}
+.kpiBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(141,226,214,.75);
+  background: rgba(141,226,214,.22);
+  color: var(--brand);
+  font-weight: 900;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Valor KPI */
+.kpiValue{
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: var(--brand);
+  line-height: 1;
+}
+.kpiMeta{
+  margin-top: -2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Separador suave dentro de cards */
+.kpiDivider{
+  height: 1px;
+  background: rgba(21,50,68,.10);
+  margin: 2px 0;
+}
+
+/* Barra de progreso (alineada prolija) */
+.progressRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.progress{
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(21,50,68,.08);
+  overflow:hidden;
+  border: 1px solid rgba(21,50,68,.10);
+}
+.progress > span{
+  display:block;
+  height:100%;
+  width: var(--p, 0%);
+  background: rgba(141,226,214,.85);
+  border-right: 1px solid rgba(21,50,68,.18);
+}
+.progressPct{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(21,50,68,.86);
+  min-width: 46px;
+  text-align:right;
+}
+
+/* Lista compacta en tablero (ej: top entidades) */
+.miniList{
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.miniRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(21,50,68,.10);
+  background: rgba(21,50,68,.03);
+}
+.miniRow .left{
+  display:flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.miniRow .name{
+  font-weight: 900;
+  color: var(--brand);
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 520px;
+}
+.miniRow .desc{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 520px;
+}
+.miniRow .right{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* “Tabla mini” dentro de una card */
+.miniTable{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow:hidden;
+  background: var(--surface);
+}
+.miniTable .head{
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--brand);
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+}
+.miniTable .body{
+  padding: 10px 12px;
+  max-height: 280px;
+  overflow:auto;
+}
+
+/* Responsive tablero */
+@media (max-width: 1100px){
+  .kpiCard{ grid-column: span 6; }
+}
+@media (max-width: 720px){
+  .kpiCard{ grid-column: span 12; }
+  .tableroHeader{ align-items:flex-start; }
+  .progressPct{ min-width: 40px; }
+}
+/* =========================================================
+   TABLERO ENTIDADES — Barra de controles + tabla
+   Objetivo: selector (kind) + buscador + filtros (sector/rubro/comuna)
+   Sin romper tu sistema: reutiliza .panel, .tableWrap, .scrollX, table
+   ========================================================= */
+
+/* contenedor del bloque (en Index lo usamos como wrapper) */
+.entBoard{
+  display: grid;
+  gap: 12px;
+}
+
+/* barra de controles */
+.entBar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  padding: 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+/* lado izquierdo: selector + buscador */
+.entBarLeft{
+  display:flex;
+  gap: 10px;
+  align-items:flex-end;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 280px;
+}
+
+/* lado derecho: filtros */
+.entBarRight{
+  display:flex;
+  gap: 10px;
+  align-items:flex-end;
+  flex-wrap: wrap;
+  justify-content:flex-end;
+}
+
+/* campos (no tocamos .input global, solo ancho y min) */
+.entField{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  min-width: 180px;
+}
+.entField.w240{ min-width: 240px; }
+.entField.w300{ min-width: 300px; }
+.entField.w360{ min-width: 360px; }
+
+.entField label{
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(21,50,68,.78);
+}
+
+/* caja meta abajo (contador resultados) */
+.entMetaRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items:center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* “chips” para indicar filtros activos (si luego lo querés) */
+.entChip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(141,226,214,.70);
+  background: rgba(141,226,214,.18);
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--brand);
+}
+
+/* tabla entidades: reutiliza tu table global, pero le bajamos min-width */
+.entTable table{ min-width: 1100px; } /* antes 1750px global */
+.entTable .cellWrap{ max-width: 520px; }
+
+/* links dentro de tabla */
+.entTable a{
+  color: var(--brand);
+  font-weight: 900;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(21,50,68,.35);
+}
+.entTable a:hover{
+  border-bottom-color: rgba(21,50,68,.70);
+}
+
+/* badge booleano (Activo / GCBA) */
+.boolBadge{
+  display:inline-flex;
+  align-items:center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 11px;
+  border: 1px solid rgba(21,50,68,.14);
+  background: rgba(21,50,68,.04);
+  color: var(--brand);
+}
+.boolBadge.on{
+  border-color: rgba(22,163,74,.28);
+  background: rgba(22,163,74,.12);
+  color: #0F5B2D;
+}
+.boolBadge.off{
+  border-color: rgba(239,68,68,.22);
+  background: rgba(239,68,68,.10);
+  color: #7F1D1D;
+}
+
+/* responsive */
+@media (max-width: 900px){
+  .entBar{ align-items:stretch; }
+  .entBarLeft, .entBarRight{ width:100%; justify-content:flex-start; }
+  .entField{ min-width: 100%; }
+  .entTable table{ min-width: 900px; }
+}
+/* =========================================================
+   RS • CALENDARIO (GCBA LIGHT) — limpio y estable
+   - Usa tokens existentes: --surface / --surface-2 / --line / --shadow-soft
+   - Compatible con el HTML que te pasé:
+     #calGridDOW + #calGridDays y las leyendas
+   ========================================================= */
+
+/* Layout 2 columnas del calendario (grid + detalle) */
+#calLayout{
+  grid-template-columns: 1fr 360px;
+}
+
+/* Días de la semana (header) */
+#calGridDOW{
+  user-select:none;
+}
+#calGridDOW > div{
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: rgba(21,50,68,.72);
+}
+
+/* Grilla (celdas) */
+#calGridDays{
+  width: 100%;
+}
+
+/* Cada celda (día) */
+.calCell{
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: none;
+  min-height: 120px;
+  padding: 10px;
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  transition: transform .08s ease, box-shadow .15s ease, border-color .15s ease;
+  cursor: pointer;
+}
+
+.calCell:hover{
+  transform: translateY(-1px);
+  border-color: rgba(141,226,214,.55);
+  box-shadow: var(--shadow-soft);
+}
+
+.calCell.isOut{
+  opacity: .50;
+  background: rgba(21,50,68,.02);
+}
+
+.calCell.isToday{
+  border-color: rgba(141,226,214,.95);
+  box-shadow: 0 0 0 4px rgba(141,226,214,.18);
+}
+
+.calCell.isSelected{
+  outline: 2px solid rgba(21,50,68,.22);
+  outline-offset: 0px;
+}
+
+/* Header del día (número + contador opcional) */
+.calDayHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 8px;
+}
+
+.calDayNum{
+  font-weight: 900;
+  font-size: 14px;
+  color: rgba(21,50,68,.88);
+  line-height: 1;
+}
+
+.calDayCount{
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(21,50,68,.70);
+  background: rgba(21,50,68,.06);
+  border: 1px solid rgba(21,50,68,.10);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+/* Lista de eventos dentro del día */
+.calEvents{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  min-height: 0;
+}
+
+/* Evento (tarjetita como en tu 3ra imagen) */
+.calEv{
+  border-radius: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(21,50,68,.10);
+  background: var(--surface-3);
+  overflow:hidden;
+  transition: filter .12s ease, transform .08s ease, border-color .12s ease;
+  user-select:none;
+}
+
+.calEv:hover{
+  filter: brightness(.985);
+  border-color: rgba(141,226,214,.55);
+}
+
+.calEvTime{
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(21,50,68,.72);
+  margin-bottom: 2px;
+}
+
+.calEvTitle{
+  font-size: 12.5px;
+  font-weight: 900;
+  color: rgba(21,50,68,.92);
+  line-height: 1.25;
+}
+
+.calEvMeta{
+  margin-top: 6px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(21,50,68,.70);
+}
+
+.calDot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(21,50,68,.14);
+  background: var(--neutral);
+}
+
+/* Estados (si tu App asigna clases) */
+.calEv.state-IDEA{ background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.26); }
+.calEv.state-DESARROLLO{ background: rgba(141,226,214,.22); border-color: rgba(141,226,214,.55); }
+.calEv.state-REALIZADO{ background: rgba(22,163,74,.14); border-color: rgba(22,163,74,.25); }
+.calEv.state-CANCELADO{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); }
+
+/* Leyendas (chips) */
+.calLegendChip{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(21,50,68,.14);
+  background: rgba(21,50,68,.03);
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--brand);
+}
+
+.calLegendChip .swatch{
+  width: 14px;
+  height: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(21,50,68,.14);
+}
+
+/* Responsive: el layout 2 columnas pasa a 1 */
+@media (max-width: 1100px){
+  #calLayout{
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================
+   HOTFIX: Calendario responsive
+   - El inline style de #calLayout pisa los media queries
+   - Solución: que el layout responda por CSS (y el inline no defina columnas)
+   ========================= */
+
+/* Si dejás el inline, esto no puede ganarle.
+   Recomendación: en Index eliminar "grid-template-columns: 1fr 360px;" del style inline. */
+
+/* =========================
+   Badge (faltaba)
+   ========================= */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(141,226,214,.75);
+  background: rgba(141,226,214,.18);
+  color: var(--brand);
+  font-weight: 900;
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* =========================================================
+   FIX CALENDARIO: que NO quede encerrado en adminMiniBody
+   ========================================================= */
+#viewCalendario .adminMiniBody{
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* La grilla no debe forzar ancho mínimo por celda (evita scroll horizontal) */
+#viewCalendario #calGridDOW,
+#viewCalendario #calGridDays{
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 12px !important; /* podés bajar a 10 si querés más compacto */
+}
+
+/* Celdas un poco más “Plan Equipo”: más aire y altura consistente */
+#viewCalendario .calCell{
+  min-height: 150px;      /* subila/bajala a gusto */
+  padding: 12px;
+}
+
+/* Ajuste responsive: en pantallas medianas el panel derecho baja abajo */
+@media (max-width: 1200px){
+  #viewCalendario #calLayout{
+    grid-template-columns: 1fr !important;
+  }
+}
+/* =========================================================
+   RS • MEDICIONES (GCBA LIGHT) — Addon CSS
+   Pegar al final del <style>
+   Objetivo:
+   - Barra de filtros (periodo/área/tipo/buscador) + acciones
+   - KPIs cards (resumen)
+   - Tabla mediciones (compacta, moderna)
+   - Tags/chips para tipo/estado
+   - Soporte para “detalle” / panel derecho si reminderas
+   ========================================================= */
+
+#viewMediciones{
+  /* si el contenedor ya está dentro de .panel, no pasa nada */
+}
+
+/* ----- Layout principal opcional (grid + panel detalle) ----- */
+#medLayout{
+  display:grid;
+  grid-template-columns: 1fr 380px;
+  gap: 14px;
+  align-items:start;
+}
+
+/* ----- Barra superior (filtros + acciones) ----- */
+.medBar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap:wrap;
+
+  padding: 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+.medBarLeft,
+.medBarRight{
+  display:flex;
+  gap: 10px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+}
+
+.medBarLeft{ flex: 1; min-width: 280px; }
+.medBarRight{ justify-content:flex-end; }
+
+.medField{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  min-width: 180px;
+}
+.medField.w240{ min-width: 240px; }
+.medField.w300{ min-width: 300px; }
+.medField.w360{ min-width: 360px; }
+
+.medField label{
+  margin:0;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(21,50,68,.78);
+}
+
+/* Meta debajo (contador, período aplicado, etc.) */
+.medMetaRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap:wrap;
+  align-items:center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ----- KPIs (cards) ----- */
+.medKpiGrid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+
+.medKpiCard{
+  grid-column: span 3;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  padding: 14px;
+  min-height: 96px;
+
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.medKpiCard.span4{ grid-column: span 4; }
+.medKpiCard.span6{ grid-column: span 6; }
+.medKpiCard.span8{ grid-column: span 8; }
+.medKpiCard.span12{ grid-column: span 12; }
+
+.medKpiHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+}
+.medKpiLabel{
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: rgba(21,50,68,.78);
+}
+.medKpiValue{
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: var(--brand);
+  line-height: 1;
+}
+.medKpiSub{
+  margin-top: -2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Barra/progreso para metas */
+.medProgressRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.medProgress{
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(21,50,68,.08);
+  overflow:hidden;
+  border: 1px solid rgba(21,50,68,.10);
+}
+.medProgress > span{
+  display:block;
+  height:100%;
+  width: var(--p, 0%);
+  background: rgba(141,226,214,.85);
+  border-right: 1px solid rgba(21,50,68,.18);
+}
+.medProgressPct{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(21,50,68,.86);
+  min-width: 46px;
+  text-align:right;
+}
+
+/* ----- Tabla mediciones (más angosta que ACCIONES) ----- */
+.medTable table{ min-width: 1200px; } /* evita tu default 1750px */
+.medTable .cellWrap{ max-width: 560px; }
+
+/* Cabeceras más “tablero” */
+.medTable thead th{
+  border-bottom: 2px solid rgba(141,226,214,.55);
+}
+
+/* Filas clickeables (si querés abrir detalle) */
+.medRowClickable{
+  cursor:pointer;
+}
+.medRowClickable:hover{
+  background: rgba(141,226,214,.16);
+}
+
+/* ----- Chips / Tags (tipo, estado, unidad) ----- */
+.medChip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(21,50,68,.14);
+  background: rgba(21,50,68,.03);
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--brand);
+  white-space: nowrap;
+}
+.medChip .dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background: var(--neutral);
+  box-shadow: 0 0 0 3px rgba(21,50,68,.09);
+}
+
+/* Variantes */
+.medChip.good{ background: rgba(22,163,74,.12); border-color: rgba(22,163,74,.24); color:#0F5B2D; }
+.medChip.good .dot{ background: var(--good); }
+
+.medChip.warn{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.26); color:#7C4A03; }
+.medChip.warn .dot{ background: var(--warn); }
+
+.medChip.bad{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.25); color:#7F1D1D; }
+.medChip.bad .dot{ background: var(--bad); }
+
+.medChip.info{ background: rgba(14,165,233,.12); border-color: rgba(14,165,233,.22); color:#0B4C7A; }
+.medChip.info .dot{ background: var(--info); }
+
+/* ----- Panel derecho / Detalle (si existe) ----- */
+.medSide{
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  overflow:hidden;
+}
+
+.medSideHead{
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  align-items:center;
+}
+.medSideTitle{
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--brand);
+  letter-spacing: .9px;
+  text-transform: uppercase;
+}
+.medSideBody{
+  padding: 14px;
+  display:grid;
+  gap: 12px;
+}
+
+/* Bloques de dato */
+.medKV{
+  display:grid;
+  gap: 6px;
+  border: 1px solid rgba(21,50,68,.10);
+  background: rgba(21,50,68,.03);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.medKV .k{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(21,50,68,.78);
+  text-transform: uppercase;
+  letter-spacing: .9px;
+}
+.medKV .v{
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(21,50,68,.92);
+}
+
+/* ----- Modal mediciones (si lo separás del modal global) ----- */
+#medModal .modal{
+  width: min(980px, 100%);
+}
+#medModal .grid2{ grid-template-columns: 1fr 1fr; }
+#medModal .grid3{ grid-template-columns: 1fr 1fr 1fr; }
+
+/* ----- Responsive ----- */
+@media (max-width: 1200px){
+  #medLayout{ grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px){
+  .medBar{ align-items:stretch; }
+  .medBarLeft, .medBarRight{ width:100%; justify-content:flex-start; }
+  .medField{ min-width: 100%; }
+
+  .medKpiCard{ grid-column: span 6; }
+  .medTable table{ min-width: 980px; }
+}
+
+@media (max-width: 720px){
+  .medKpiCard{ grid-column: span 12; }
+}
+.segmented{
+  display:flex;
+  gap:8px;
+  flex-wrap:nowrap;
+  overflow:auto;
+  padding:8px 2px;
+}
+.segmented::-webkit-scrollbar{ height:8px; }
+.segmented .seg{
+  white-space:nowrap;
+  border:1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  border-radius:999px;
+  padding:8px 10px;
+  font-weight:700;
+  font-size:12px;
+  cursor:pointer;
+  user-select:none;
+}
+.segmented .seg.active{
+  background: var(--brand, #153244);
+  border-color: var(--brand, #153244);
+  color:#fff;
+}
+.segmented .seg.muted{
+  opacity:.7;
+}
+.segmented .seg{
+  transition: transform .06s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+.segmented .seg:hover{
+  background: var(--surface-2);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-soft);
+}
+.segmented .seg:active{ transform: scale(.98); }
+.segmented .seg:focus-visible{
+  outline:none;
+  box-shadow: 0 0 0 4px var(--focus);
+}
+.segmented .seg.active:hover{
+  filter: brightness(.96);
+}
+/* Slider de chips */
+.chip-slider{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chip-slider-btn{
+  border: 1px solid #d9dfe7;
+  background: #fff;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.chip-slider-rail{
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+}
+
+.chip-slider-rail::-webkit-scrollbar{
+  height: 8px;
+}
+
+.chip{
+  border: 1px solid #d9dfe7;
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.chip.active{
+  background: #0b2b3a;   /* ajustalo a tu theme */
+  border-color: #0b2b3a;
+  color: #fff;
+}
+.chipHost{ width:100%; }
+
+/* Slider de chips */
+.chip-slider{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.chip-slider-btn{
+  border:1px solid #d9dfe7;
+  background:#fff;
+  border-radius:999px;
+  width:36px;
+  height:36px;
+  cursor:pointer;
+  font-size:18px;
+  line-height:1;
+  display:grid;
+  place-items:center;
+}
+
+.chip-slider-rail{
+  flex:1;
+  display:flex;
+  gap:10px;
+  overflow-x:auto;
+  scroll-behavior:smooth;
+  padding:4px 2px;
+  scrollbar-width:thin;
+}
+
+.chip{
+  border:1px solid #d9dfe7;
+  background:#fff;
+  border-radius:999px;
+  padding:10px 14px;
+  cursor:pointer;
+  white-space:nowrap;
+  font-weight:600;
+}
+
+.chip.active{
+  background:#0b2b3a;
+  border-color:#0b2b3a;
+  color:#fff;
+}
+.selectLikeYear{
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border, #D7DEE6);
+  background: #fff;
+  padding: 0 14px;
+  font-size: 16px;
+  outline: none;
+}
+.selectLikeYear:focus{
+  border-color: var(--accent, #1F3B4D);
+  box-shadow: 0 0 0 3px rgba(31,59,77,.12);
+}
+.filterRow{ margin: 10px 0 14px; }
+.filterLabel{ display:block; margin: 0 0 8px; font-weight: 600; opacity:.85; }
+.selectLikeYear,
+.chip-slider {
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+
+</style>
