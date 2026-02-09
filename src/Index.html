@@ -17,14 +17,12 @@
 
       <div class="controls">
         <!-- Tabs -->
-        <button class="btn ghost active" id="tabAcciones">Tablero Acciones</button>
-        <button class="btn ghost" id="tabTableroEntidades">Tablero Entidades</button>
+        <button class="btn ghost active" id="tabCalendario">Calendario</button>
+        <button class="btn ghost" id="tabMediciones">Mediciones</button>
         <button class="btn ghost" id="tabCarga">Carga Acciones</button>
         <button class="btn ghost" id="tabAdmin">Carga Entidades</button>
-        <button class="btn ghost" id="tabMediciones">Mediciones</button>
-
-        <!-- ✅ NUEVO: Calendario -->
-        <button class="btn ghost" id="tabCalendario">Calendario</button>
+        <button class="btn ghost" id="tabAcciones">Tablero Acciones</button>
+        <button class="btn ghost" id="tabTableroEntidades">Tablero Entidades</button>
 
         <!-- ✅ SACADO: btnRefresh ya no va acá -->
 
@@ -387,18 +385,29 @@
             <div class="adminTitle">Carga de entidades</div>
           </div>
 
-          <div class="adminHeaderRight" style="display:flex; gap:10px; align-items:center;">
-            <select id="adm_module" class="input selectDark" style="min-width:340px;">
-              <option value="entidad_privada" selected>Entidades Privadas (ENTIDADES_PRIVADAS)</option>
-              <option value="area_contacto">Áreas GCBA (AREAS_GCBA)</option>
-              <option value="persona_reconocida">Personas reconocidas (PERSONAS)</option>
-            </select>
-            <button class="btn" id="btnAdminRefresh2">Refrescar</button>
-          </div>
-        </div>
+            <div class="adminHeaderRight" style="display:flex; gap:10px; align-items:center;">
+              <select id="adm_module" class="input selectDark" style="min-width:340px;">
+                <option value="entidad_privada" selected>Entidades Privadas (ENTIDADES_PRIVADAS)</option>
+                <option value="area_contacto">Áreas GCBA (AREAS_GCBA)</option>
+                <option value="persona_reconocida">Personas reconocidas (PERSONAS)</option>
+              </select>
+                <div id="admActions" style="display:flex; gap:10px; align-items:center;">
+                  <div id="admActions_entidad" style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn primary" id="ep_btn_guardar">Guardar</button>
+                  </div>
+                  <div id="admActions_area" style="display:none; gap:10px; align-items:center;">
+                    <button class="btn primary" id="ac_btn_guardar">Guardar</button>
+                  </div>
+                  <div id="admActions_persona" style="display:none; gap:10px; align-items:center;">
+                    <button class="btn primary" id="pr_btn_guardar">Guardar</button>
+                  </div>
+                </div>
+                <button class="btn" id="btnAdminBack">Volver</button>
+              </div>
+            </div>
 
         <!-- PANEL 1 -->
-        <div class="adminCard" id="admPanel_entidad_privada">
+        <div id="admPanel_entidad_privada">
           <!-- ENTIDAD -->
           <div class="section" style="margin-top:0;">
             <div class="sectionTitle">ENTIDAD</div>
@@ -530,25 +539,11 @@
               * Obligatorio: Nombre y Apellido.
             </div>
           </div>
-
-          <div class="adminActions">
-            <button class="btn primary" id="ep_btn_guardar">Guardar</button>
-            <button class="btn" id="ep_btn_limpiar">Limpiar</button>
-          </div>
-
-          <div class="adminMini">
-            <div class="adminMiniHead">
-              <div>Resultado</div>
-              <div class="muted" id="ep_result_meta">—</div>
-            </div>
-            <div class="adminMiniBody" id="ep_result_box">
-              <div class="muted">Todavía no se guardó nada.</div>
-            </div>
           </div>
         </div>
 
         <!-- PANEL 2 -->
-        <div class="adminCard" id="admPanel_area_contacto" style="display:none;">
+        <div id="admPanel_area_contacto" style="display:none;">
 
           <div class="section" style="margin-top:0;">
             <div class="sectionTitle">ÁREA (GCBA)</div>
@@ -631,26 +626,12 @@
               * Obligatorio: <b>Nombre</b> y <b>Apellido</b>.
             </div>
           </div>
-
-          <div class="adminActions">
-            <button class="btn primary" id="ac_btn_guardar">Guardar</button>
-            <button class="btn" id="ac_btn_limpiar">Limpiar</button>
-          </div>
-
-          <div class="adminMini">
-            <div class="adminMiniHead">
-              <div>Resultado</div>
-              <div class="muted" id="ac_result_meta">—</div>
-            </div>
-            <div class="adminMiniBody" id="ac_result_box">
-              <div class="muted">Todavía no se guardó nada.</div>
-            </div>
           </div>
 
         </div>
 
         <!-- PANEL 3 -->
-        <div class="adminCard" id="admPanel_persona_reconocida" style="display:none;">
+        <div id="admPanel_persona_reconocida" style="display:none;">
 
           <div class="section" style="margin-top:0;">
             <div class="sectionTitle">PERSONA RECONOCIDA</div>
@@ -707,20 +688,6 @@
               * Obligatorio: Apellido y Nombre.
             </div>
           </div>
-
-          <div class="adminActions">
-            <button class="btn primary" id="pr_btn_guardar">Guardar</button>
-            <button class="btn" id="pr_btn_limpiar">Limpiar</button>
-          </div>
-
-          <div class="adminMini">
-            <div class="adminMiniHead">
-              <div>Resultado</div>
-              <div class="muted" id="pr_result_meta">—</div>
-            </div>
-            <div class="adminMiniBody" id="pr_result_box">
-              <div class="muted">Todavía no se guardó nada.</div>
-            </div>
           </div>
 
         </div>
@@ -738,26 +705,33 @@
 
     <div class="adminHeader">
       <div class="adminHeaderLeft">
-        <div class="adminTitle">RS • Mediciones</div>
+        <div class="adminTitle">Mediciones</div>
       </div>
 
-      <div class="adminHeaderRight">
-        <div class="adminBuildPill" id="medBuildPill">Build: —</div>
-      </div>
+      <div class="adminHeaderRight"></div>
     </div>
 
     <!-- Controles -->
-    <div class="adminControl" style="min-width:220px;">
-<label for="med_year">Año</label>
-<select id="med_year" class="input selectDark">
-  <option value="">Cargando…</option>
-</select>
-</div>
-
-
-      <div class="adminControl" style="min-width:260px;">
+    <div class="medFiltersTop">
+      <div class="adminControl" style="min-width:260px; flex:1;">
         <label for="med_q">Buscar</label>
         <input id="med_q" class="input" placeholder='Ej: "Discapacidad" / "Realizado" / "Bienestar"...' />
+      </div>
+    </div>
+
+    <div class="medFiltersBottom">
+      <div class="adminControl" style="min-width:220px;">
+        <label for="med_year">Año</label>
+        <select id="med_year" class="input selectDark">
+          <option value="">Cargando…</option>
+        </select>
+      </div>
+
+      <div class="adminControl" style="min-width:220px;">
+        <label for="med_month">Mes</label>
+        <select id="med_month" class="input selectDark">
+          <option value="">(todos)</option>
+        </select>
       </div>
 
       <div class="adminBtns">
@@ -858,30 +832,18 @@
           <div class="adminTitle">Calendario</div>
         </div>
 
-      <div class="adminHeaderRight">
-        <div class="adminBuildPill" id="calBuildPill">Build: —</div>
+        <div class="adminHeaderRight"></div>
       </div>
-    </div>
 
     <!-- Controles -->
-    <div class="adminTopControls" style="align-items:flex-end;">
-      <div class="adminControl" style="min-width:220px;">
-        <label for="cal_mode">Vista</label>
-        <select id="cal_mode" class="input selectDark">
-          <option value="month" selected>Mes</option>
-          <option value="week">Semana</option>
-          <option value="day">Día</option>
-          <option value="agenda">Agenda</option>
-        </select>
-      </div>
-
-      <div class="adminControl" style="min-width:220px;">
-        <label for="cal_estado">Estado</label>
-        <select id="cal_estado" class="input selectDark">
-          <option value="" selected>(todos)</option>
-          <!-- App.html inyecta opciones -->
-        </select>
-      </div>
+      <div class="adminTopControls" style="align-items:flex-end;">
+        <div class="adminControl" style="min-width:220px;">
+          <label for="cal_estado">Estado</label>
+          <select id="cal_estado" class="input selectDark">
+            <option value="" selected>(todos)</option>
+            <!-- App.html inyecta opciones -->
+          </select>
+        </div>
 
       <div class="adminControl" style="min-width:260px;">
         <label for="cal_q">Buscar</label>
@@ -915,7 +877,7 @@
       <!-- Header días semana -->
       <div id="calGridDOW" style="
         display:grid;
-        grid-template-columns: repeat(7, minmax(120px, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         gap:10px;
         margin-bottom:10px;
         font-weight:700;
@@ -929,36 +891,20 @@
       <!-- Grilla (App.html renderiza aquí celdas y eventos) -->
       <div id="calGridDays" style="
         display:grid;
-        grid-template-columns: repeat(7, minmax(120px, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         gap:10px;
-      ">
-        <div class="muted" style="grid-column: 1 / -1; padding:10px 2px;">
-          Calendario listo. Falta que App.html renderice celdas y eventos.
-        </div>
-      </div>
+      "></div>
 
       <!-- Leyendas -->
       <div id="calLegends" style="margin-top:14px;">
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <div class="muted" style="min-width:120px; font-weight:700;">Línea Temática</div>
-          <div id="calLegendLineas" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-        </div>
-
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
-          <div class="muted" style="min-width:120px; font-weight:700;">Estado</div>
-          <div id="calLegendEstados" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-        </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+            <div id="calLegendEstados" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+          </div>
       </div>
     </div>
   </div>
 
       </div><!-- /calLayout -->
-
-    <!-- Footer meta -->
-    <div class="footerMeta" style="margin-top:14px;">
-      <div id="calLeft" class="badge">Calendario listo</div>
-      <div id="calRight" class="muted">—</div>
-    </div>
 
   </div>
 </div>

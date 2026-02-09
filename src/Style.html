@@ -84,6 +84,9 @@ body{
     radial-gradient(900px 360px at 18% 0%, rgba(141,226,214,.18), transparent 58%),
     var(--bg);
 }
+body{
+  overflow-x: hidden;
+}
 body.modal-hide-header .topbar{
   display:none;
 }
@@ -1672,6 +1675,13 @@ label{
   max-height: none !important;
   overflow: visible !important;
 }
+/* Evitar scrollbar horizontal en calendario */
+#viewCalendario,
+#viewCalendario .panel,
+#viewCalendario .adminShell,
+#viewCalendario #calLayout{
+  overflow-x: hidden;
+}
 
 /* La grilla no debe forzar ancho mínimo por celda (evita scroll horizontal) */
 #viewCalendario #calGridDOW,
@@ -1735,6 +1745,18 @@ label{
 
 .medBarLeft{ flex: 1; min-width: 280px; }
 .medBarRight{ justify-content:flex-end; }
+
+/* Nuevo layout de filtros mediciones */
+.medFiltersTop,
+.medFiltersBottom{
+  display:flex;
+  gap:12px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+}
+.medFiltersTop{ margin-top: 6px; }
+.medFiltersBottom{ margin-top: 12px; }
+.medFiltersBottom .adminBtns{ margin-left: auto; }
 
 .medField{
   display:flex;

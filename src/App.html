@@ -1149,16 +1149,19 @@ if (FILTERS.acciones.btnClear){
     COMBOS.estado_accion ??= createCombo($("cb_estado_accion"), {
       placeholder:"(seleccionar)",
       options: estadoAccion.map(x=>({value:String(x).toUpperCase(), label:String(x).toUpperCase()})),
-      allowCustom:false
+      allowCustom:false,
+      readOnlyInput:true,
+      showHeader:false,
+      showClear:false
     });
 
-    COMBOS.tipo_accion ??= createCombo($("cb_tipo_accion"), { placeholder:"(seleccionar)", options: tiposAccion, allowCustom:false });
-    COMBOS.eje ??= createCombo($("cb_eje"), { placeholder:"(seleccionar)", options: ejes, allowCustom:false });
-    COMBOS.lineaTematica ??= createCombo($("cb_linea_tematica"), { placeholder:"(seleccionar)", options: lineaTematica, allowCustom:false });
-    COMBOS.lugar ??= createCombo($("cb_lugar"), { placeholder:"(seleccionar)", options: lugares, allowCustom:false });
-    COMBOS.meta_tipo ??= createCombo($("cb_tipo_indicador"), { placeholder:"(seleccionar)", options: metaTipos, allowCustom:false });
+    COMBOS.tipo_accion ??= createCombo($("cb_tipo_accion"), { placeholder:"(seleccionar)", options: tiposAccion, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    COMBOS.eje ??= createCombo($("cb_eje"), { placeholder:"(seleccionar)", options: ejes, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    COMBOS.lineaTematica ??= createCombo($("cb_linea_tematica"), { placeholder:"(seleccionar)", options: lineaTematica, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    COMBOS.lugar ??= createCombo($("cb_lugar"), { placeholder:"(seleccionar)", options: lugares, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    COMBOS.meta_tipo ??= createCombo($("cb_tipo_indicador"), { placeholder:"(seleccionar)", options: metaTipos, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
-    COMBOS.prod_tipo ??= createCombo($("cb_produccion_tipo"), { placeholder:"(seleccionar)", options: prodTipoOpts, allowCustom:false });
+    COMBOS.prod_tipo ??= createCombo($("cb_produccion_tipo"), { placeholder:"(seleccionar)", options: prodTipoOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
     COMBOS.ente1 ??= createCombo($("cb_ente1"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
     COMBOS.ente2 ??= createCombo($("cb_ente2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
@@ -1168,14 +1171,14 @@ if (FILTERS.acciones.btnClear){
     COMBOS.area2 ??= createCombo($("cb_area2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
     COMBOS.area3 ??= createCombo($("cb_area3"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshOrganizerOptions });
 
-    COMBOS.territorio ??= createCombo($("cb_territorio"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
-    COMBOS.contratacion ??= createCombo($("cb_contratacion"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
+    COMBOS.territorio ??= createCombo($("cb_territorio"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    COMBOS.contratacion ??= createCombo($("cb_contratacion"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
     COMBOS.part_ent ??= createCombo($("cb_part_ent"), { placeholder:"Buscar…", options: [], allowCustom:true });
     COMBOS.part_per ??= createCombo($("cb_part_per"), { placeholder:"Buscar…", options: [], allowCustom:true });
 
-    COMBOS.ent_status ??= createCombo($("cb_ent_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
-    COMBOS.per_status ??= createCombo($("cb_per_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
+    COMBOS.ent_status ??= createCombo($("cb_ent_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    COMBOS.per_status ??= createCombo($("cb_per_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
     COMBOS.estado_accion.setOptions(estadoAccion.map(x=>({value:String(x).toUpperCase(), label:String(x).toUpperCase()})));
     COMBOS.tipo_accion.setOptions(tiposAccion);
@@ -1223,16 +1226,19 @@ if (FILTERS.acciones.btnClear){
       placeholder:"(seleccionar)",
       options: estadoAccion.map(x=>({value:String(x).toUpperCase(), label:String(x).toUpperCase()})),
       allowCustom:false,
-      onChange: () => applyCreateStateRules()
+      onChange: () => applyCreateStateRules(),
+      readOnlyInput:true,
+      showHeader:false,
+      showClear:false
     });
 
-    CCOMBOS.tipo_accion ??= createCombo($("c_cb_tipo_accion"), { placeholder:"(seleccionar)", options: tiposAccion, allowCustom:false });
-    CCOMBOS.eje ??= createCombo($("c_cb_eje"), { placeholder:"(seleccionar)", options: ejes, allowCustom:false });
-    CCOMBOS.lineaTematica ??= createCombo($("c_cb_linea_tematica"), { placeholder:"(seleccionar)", options: lineaTematica, allowCustom:false });
-    CCOMBOS.lugar ??= createCombo($("c_cb_lugar"), { placeholder:"(seleccionar)", options: lugares, allowCustom:false });
-    CCOMBOS.meta_tipo ??= createCombo($("c_cb_tipo_indicador"), { placeholder:"(seleccionar)", options: metaTipos, allowCustom:false });
+    CCOMBOS.tipo_accion ??= createCombo($("c_cb_tipo_accion"), { placeholder:"(seleccionar)", options: tiposAccion, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    CCOMBOS.eje ??= createCombo($("c_cb_eje"), { placeholder:"(seleccionar)", options: ejes, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    CCOMBOS.lineaTematica ??= createCombo($("c_cb_linea_tematica"), { placeholder:"(seleccionar)", options: lineaTematica, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    CCOMBOS.lugar ??= createCombo($("c_cb_lugar"), { placeholder:"(seleccionar)", options: lugares, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    CCOMBOS.meta_tipo ??= createCombo($("c_cb_tipo_indicador"), { placeholder:"(seleccionar)", options: metaTipos, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
-    CCOMBOS.prod_tipo ??= createCombo($("c_cb_produccion_tipo"), { placeholder:"(seleccionar)", options: prodTipoOpts, allowCustom:false });
+    CCOMBOS.prod_tipo ??= createCombo($("c_cb_produccion_tipo"), { placeholder:"(seleccionar)", options: prodTipoOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
     CCOMBOS.ente1 ??= createCombo($("c_cb_ente1"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
     CCOMBOS.ente2 ??= createCombo($("c_cb_ente2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
@@ -1242,14 +1248,14 @@ if (FILTERS.acciones.btnClear){
     CCOMBOS.area2 ??= createCombo($("c_cb_area2"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
     CCOMBOS.area3 ??= createCombo($("c_cb_area3"), { placeholder:"(ninguno)", options: [], allowCustom:false, onChange: refreshCreateOrganizerOptions });
 
-    CCOMBOS.territorio ??= createCombo($("c_cb_territorio"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
-    CCOMBOS.contratacion ??= createCombo($("c_cb_contratacion"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false });
+    CCOMBOS.territorio ??= createCombo($("c_cb_territorio"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    CCOMBOS.contratacion ??= createCombo($("c_cb_contratacion"), { placeholder:"(seleccionar)", options: siNoOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
     CCOMBOS.part_ent ??= createCombo($("c_cb_part_ent"), { placeholder:"Buscar…", options: [], allowCustom:true });
     CCOMBOS.part_per ??= createCombo($("c_cb_part_per"), { placeholder:"Buscar…", options: [], allowCustom:true });
 
-    CCOMBOS.ent_status ??= createCombo($("c_cb_ent_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
-    CCOMBOS.per_status ??= createCombo($("c_cb_per_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false });
+    CCOMBOS.ent_status ??= createCombo($("c_cb_ent_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
+    CCOMBOS.per_status ??= createCombo($("c_cb_per_status"), { placeholder:"Estado", options: pstOpts, allowCustom:false, readOnlyInput:true, showHeader:false, showClear:false });
 
     refreshCreateOrganizerOptions();
     refreshParticipantOptionsFor(cEntItems, cPerItems, CCOMBOS.part_ent, CCOMBOS.part_per);
@@ -2518,6 +2524,9 @@ function buildEntidadPrivadaControls(){
     placeholder:"(seleccionar)",
     options: buildSectorOpts(),
     allowCustom:false,
+    readOnlyInput:true,
+    showHeader:false,
+    showClear:false,
   });
 
   // ✅ Rubro (combo)
@@ -2532,6 +2541,9 @@ function buildEntidadPrivadaControls(){
     placeholder:"(seleccionar)",
     options: buildZonaCoberturaOpts(),
     allowCustom:false,
+    readOnlyInput:true,
+    showHeader:false,
+    showClear:false,
   });
 
   // ✅ Zona (comuna) (combo)
@@ -2539,6 +2551,9 @@ function buildEntidadPrivadaControls(){
     placeholder:"(seleccionar)",
     options: buildComunasOpts(),
     allowCustom:false,
+    readOnlyInput:true,
+    showHeader:false,
+    showClear:false,
   });
 
   // ✅ Estado de contacto (combo)
@@ -2546,6 +2561,9 @@ function buildEntidadPrivadaControls(){
     placeholder:"(seleccionar)",
     options: buildEstadoContactoOpts(),
     allowCustom:false,
+    readOnlyInput:true,
+    showHeader:false,
+    showClear:false,
   });
 
   // ✅ Red discapacidad (combo)
@@ -2553,6 +2571,9 @@ function buildEntidadPrivadaControls(){
     placeholder:"(seleccionar)",
     options: buildRedDiscapacidadOpts(),
     allowCustom:false,
+    readOnlyInput:true,
+    showHeader:false,
+    showClear:false,
     onChange: () => {
       // Si la entidad es "Sí", autocompleta en la persona. Si no, "No".
       const rd = String(ACOMBOS.ep_red_discapacidad?.getSelection().value || "").trim();
@@ -3244,8 +3265,8 @@ function adminGetModule(){
   return v || "entidad_privada";
 }
 
-function adminShowModule(mod){
-  const m = mod || adminGetModule();
+  function adminShowModule(mod){
+    const m = mod || adminGetModule();
 
   const map = {
     entidad_privada: "admPanel_entidad_privada",
@@ -3260,15 +3281,22 @@ function adminShowModule(mod){
   });
 
   // mostrar el seleccionado
-  const panelId = map[m];
-  const panel = $(panelId);
-  if (panel) panel.style.display = "";
+    const panelId = map[m];
+    const panel = $(panelId);
+    if (panel) panel.style.display = "";
 
-  const labels = {
-    entidad_privada: "Carga de Entidades",
-    area_contacto: "Carga de Área + Contacto",
-    persona_reconocida: "Personas reconocidas",
-  };
+    const actEnt = $("admActions_entidad");
+    const actArea = $("admActions_area");
+    const actPer = $("admActions_persona");
+    if (actEnt) actEnt.style.display = (m === "entidad_privada") ? "flex" : "none";
+    if (actArea) actArea.style.display = (m === "area_contacto") ? "flex" : "none";
+    if (actPer) actPer.style.display = (m === "persona_reconocida") ? "flex" : "none";
+
+    const labels = {
+      entidad_privada: "Carga de Entidades",
+      area_contacto: "Carga de Área + Contacto",
+      persona_reconocida: "Personas reconocidas",
+    };
 
   adminSetStatus(labels[m] || "Carga");
 }
@@ -3858,17 +3886,18 @@ function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns, wi
           });
         }
 
-        const calSel = $("cal_estado");
-        if (calSel){
-          calSel.innerHTML = "";
-          ["Todos", ...ESTADOS].forEach(v=>{
-            const o = document.createElement("option");
-            o.value = v === "Todos" ? "" : v;
-            o.textContent = v;
-            calSel.appendChild(o);
-          });
-        }
-renderHeader();
+          const calSel = $("cal_estado");
+          if (calSel){
+            calSel.innerHTML = "";
+            ["Todos", ...ESTADOS].forEach(v=>{
+              const o = document.createElement("option");
+              o.value = v === "Todos" ? "" : v;
+              o.textContent = v;
+              calSel.appendChild(o);
+            });
+          }
+          renderCalLegendEstados_();
+  renderHeader();
 
 // ✅ refs + bind de filtros (IMPORTANTE)
 initFiltersRefs_();
@@ -3889,15 +3918,45 @@ buildAdminControls();
 // ✅ arma filtros segmentados (usa ALL, pero tolera vacío; luego se vuelve a llamar en loadData)
 buildAccionesFilterOptions_();
 
-loadData();
+  loadData();
 
-      })
+        })
       .withFailureHandler((err) => {
         if ($("tbody")) $("tbody").innerHTML = `<tr><td class="empty">Error: ${escapeHtml(err?.message || err)}</td></tr>`;
         adminSetStatus("Error bootstrap", "bad");
       })
-      .getUIBootstrap();
-  }
+        .getUIBootstrap();
+    }
+
+    function renderCalLegendEstados_(){
+      const wrap = $("calLegendEstados");
+      if (!wrap) return;
+
+      const colors = {
+        IDEA: "var(--warn)",
+        DESARROLLO: "var(--accent)",
+        REALIZADO: "var(--good)",
+        CANCELADO: "var(--bad)",
+      };
+
+      wrap.innerHTML = "";
+      (ESTADOS || []).forEach(st=>{
+        const key = String(st || "").toUpperCase();
+        const chip = document.createElement("div");
+        chip.className = "calLegendChip";
+
+        const sw = document.createElement("span");
+        sw.className = "swatch";
+        sw.style.background = colors[key] || "var(--neutral)";
+
+        const label = document.createElement("span");
+        label.textContent = st;
+
+        chip.appendChild(sw);
+        chip.appendChild(label);
+        wrap.appendChild(chip);
+      });
+    }
 
   function loadData(){
     if ($("tbody")) $("tbody").innerHTML = `<tr><td class="empty" colspan="${DISPLAY_COLUMNS.length + 1}">Cargando…</td></tr>`;
@@ -4203,11 +4262,19 @@ function medYearSelectEl_(){
   return $("metricsPeriodFilter") || $("med_year");
 }
 
+function medMonthSelectEl_(){
+  return $("med_month");
+}
+
 function medFillYearSelect_(years){
   const sel = medYearSelectEl_();
   if (!sel) return;
 
   sel.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "Todos";
+  sel.appendChild(optAll);
   years.forEach(y=>{
     const o = document.createElement("option");
     o.value = y;
@@ -4215,22 +4282,67 @@ function medFillYearSelect_(years){
     sel.appendChild(o);
   });
 
-  const def = years[0] || "";
+  const def = "";
   const want = window.MED_STATE.year || def;
   sel.value = years.includes(want) ? want : def;
 
   window.MED_STATE.year = sel.value || def || "";
 }
 
+function medFillMonthSelect_(months, current){
+  const sel = medMonthSelectEl_();
+  if (!sel) return;
 
-function medCompute_(year, q){
+  const monthNames = {
+    "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio",
+    "07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"
+  };
+
+  sel.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "Todos";
+  sel.appendChild(optAll);
+
+  (months || []).forEach(m=>{
+    const mm = String(m).padStart(2,"0");
+    const o = document.createElement("option");
+    o.value = mm;
+    o.textContent = monthNames[mm] || mm;
+    sel.appendChild(o);
+  });
+
+  const keep = String(current || "");
+  sel.value = (keep && (months || []).map(x=>String(x).padStart(2,"0")).includes(keep)) ? keep : "";
+}
+
+function medBuildMonthsFromAll_(year){
   const rows = Array.isArray(ALL) ? ALL : [];
   const yy = String(year || "").trim();
+  const set = new Set();
+  rows.forEach(r=>{
+    const y = medYearFromIso_(r?.fecha_accion);
+    if (yy && y !== yy) return;
+    const m = medMonthFromIso_(r?.fecha_accion);
+    if (m) set.add(m);
+  });
+  return Array.from(set).sort();
+}
+
+
+function medCompute_(year, q, month){
+  const rows = Array.isArray(ALL) ? ALL : [];
+  const yy = String(year || "").trim();
+  const mm = String(month || "").trim();
   const needle = String(q || "").trim().toLowerCase();
 
   const filtered = rows.filter(r => {
     const y = medYearFromIso_(r?.fecha_accion);
     if (yy && y !== yy) return false;
+    if (mm){
+      const m = medMonthFromIso_(r?.fecha_accion);
+      if (m !== mm) return false;
+    }
 
     if (!needle) return true;
 
@@ -4269,12 +4381,21 @@ function medCompute_(year, q){
 
   return {
     year: yy,
+    month: mm,
     q: needle,
     total, idea, desarrollo, realizado, otro, pendientes,
     lineasCount: byLinea.size,
     lineas,
     filteredCount: filtered.length
   };
+}
+function medMonthFromIso_(iso){
+  const s = String(iso || "").trim();
+  const m = s.match(/^(\d{4})-(\d{2})-\d{2}/);
+  if (m) return m[2];
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m2) return String(m2[2]).padStart(2, "0");
+  return "";
 }
 function medYearOf_(v){
   if (!v) return null;
@@ -4397,19 +4518,22 @@ function medRender_(data){
 
 function medRefresh_(){
   const year = String(medYearSelectEl_()?.value || window.MED_STATE.year || "").trim();
+  const month = String(medMonthSelectEl_()?.value || window.MED_STATE.month || "").trim();
   const q = String($("med_q")?.value || "").trim();
 
   window.MED_STATE.year = year;
+  window.MED_STATE.month = month;
   window.MED_STATE.q = q;
 
-  const data = medCompute_(year, q);
+  const data = medCompute_(year, q, month);
   medRender_(data);
 }
 
 function medExportCSV_(){
   const year = String(medYearSelectEl_()?.value || window.MED_STATE.year || "").trim();
+  const month = String(medMonthSelectEl_()?.value || window.MED_STATE.month || "").trim();
   const q = String($("med_q")?.value || "").trim();
-  const data = medCompute_(year, q);
+  const data = medCompute_(year, q, month);
 
 
   const lines = [];
@@ -4479,6 +4603,7 @@ function medExport_(){
       })
       .exportMedicionesXlsx({
         year: String($("med_year")?.value || "").trim(),
+        month: String($("med_month")?.value || "").trim(),
         q: String($("med_q")?.value || "").trim()
       });
   }catch(_){
@@ -4496,7 +4621,17 @@ function medInitOnce_(){
   const selYear = medYearSelectEl_();
   if (selYear && !selYear.__bound){
     selYear.__bound = true;
-    selYear.addEventListener("change", medRefresh_);
+    selYear.addEventListener("change", ()=>{
+      window.MED_STATE.year = String(selYear.value || "").trim();
+      window.MED_STATE.month = "";
+      medFillMonthSelect_(medBuildMonthsFromAll_(window.MED_STATE.year || ""), window.MED_STATE.month || "");
+      medRefresh_();
+    });
+  }
+  const selMonth = medMonthSelectEl_();
+  if (selMonth && !selMonth.__bound){
+    selMonth.__bound = true;
+    selMonth.addEventListener("change", medRefresh_);
   }
 
   if ($("med_q") && !$("med_q").__bound){
@@ -4508,6 +4643,7 @@ function medInitOnce_(){
     $("btnMedClear").__bound = true;
     $("btnMedClear").addEventListener("click", ()=>{
       if ($("med_q")) $("med_q").value = "";
+      if (medMonthSelectEl_()) medMonthSelectEl_().value = "";
       medRefresh_();
     });
   }
@@ -4597,6 +4733,8 @@ window.loadMediciones = function(){
 
     // 4) llenar selector (usa metricsPeriodFilter si existe)
     medFillYearSelect_(years);
+    // meses disponibles (según año)
+    medFillMonthSelect_(medBuildMonthsFromAll_(window.MED_STATE.year || years[0] || ""), window.MED_STATE.month || "");
 
     // 5) render
     medRefresh_();
@@ -4612,6 +4750,7 @@ function loadMediciones(){
     window.MED_STATE.years = years;
 
     medFillYearSelect_(years);
+    medFillMonthSelect_(medBuildMonthsFromAll_(window.MED_STATE.year || years[0] || ""), window.MED_STATE.month || "");
 
     // Render mínimo garantizado: cantidad de acciones
     if ($("medKpiTotal")) $("medKpiTotal").textContent = String((ALL||[]).length);
@@ -4664,17 +4803,11 @@ if ($("btnExport") && !$("btnExport").__bound){
   $("btnExport").addEventListener("click", exportFilteredAccionesXLSX);
 }
 
-  // Admin refresh buttons
-  ["btnAdminRefresh2","btnAdminRefresh"].forEach((id)=>{
-    const b = $(id);
-    if (b && !b.__bound){
-      b.__bound = true;
-      b.addEventListener("click", ()=>{
-        adminRefreshCurrent();
-        adminSetStatus("Admin refrescado");
-      });
-    }
-  });
+  // Admin volver
+  if ($("btnAdminBack") && !$("btnAdminBack").__bound){
+    $("btnAdminBack").__bound = true;
+    $("btnAdminBack").addEventListener("click", ()=> setTab("entidades"));
+  }
 
   // Cambio de módulo Admin
   const modSel = $("adm_module");
@@ -4886,7 +5019,7 @@ if ($("btnClear") && !$("btnClear").__bound){
 
   // Arranque
   loadBootstrap(false);
-  setTab("acciones");
+  setTab("calendario");
 });
 // =========================
 // (Opcional) Extra seguro: Forzar init Calendario al abrir tab
