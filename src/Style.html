@@ -84,6 +84,9 @@ body{
     radial-gradient(900px 360px at 18% 0%, rgba(141,226,214,.18), transparent 58%),
     var(--bg);
 }
+body.modal-hide-header .topbar{
+  display:none;
+}
 
 /* Scrollbars */
 *::-webkit-scrollbar{ height: 10px; width: 10px; }
@@ -100,7 +103,7 @@ body{
 
 .wrap{
   max-width: 1480px;
-  margin: 28px auto;
+  margin: 0 auto;
   padding: 0 18px 40px;
 }
 
@@ -108,16 +111,23 @@ body{
    Topbar
    ========================= */
 .topbar{
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap: 18px;
   padding: 16px 18px;
 
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, #FFFFFF, #FBFDFD);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-bottom: 1px solid var(--line);
+  background: #FFFFFF;
+  border-radius: 0;
+  box-shadow: none;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 .brand{ display:flex; flex-direction:column; gap:6px; }
@@ -1452,6 +1462,13 @@ label{
      #calGridDOW + #calGridDays y las leyendas
    ========================================================= */
 
+/* Mes visible (ej: "Febrero de 2026") */
+#calMonthLabel{
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--brand);
+}
+
 /* Layout 2 columnas del calendario (grid + detalle) */
 #calLayout{
   grid-template-columns: 1fr 360px;
@@ -1958,6 +1975,24 @@ label{
 
 @media (max-width: 720px){
   .medKpiCard{ grid-column: span 12; }
+}
+
+/* =========================
+   ACCIONES: filtros ordenados y compactos
+   ========================= */
+.listFilters{
+  display:grid;
+  grid-template-columns: 2fr 1fr 1fr; /* Buscar 50%, Año 25%, Estado 25% */
+  gap:12px;
+  align-items:end;
+}
+.listFilters .filterField{ display:flex; flex-direction:column; gap:6px; }
+
+@media (max-width: 1100px){
+  .listFilters{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px){
+  .listFilters{ grid-template-columns: 1fr; }
 }
 
 </style>

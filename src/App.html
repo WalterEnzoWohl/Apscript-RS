@@ -600,32 +600,51 @@ function getAccionesBaseFiltered_(){
 }
 
 function buildAccionesFilterOptions_(){
-  const year = ACCIONES_FILTER_STATE.year;
+  const year = ACCIONES_FILTER_STATE.year || "";
 
   ACCIONES_FILTER_STATE.tipo  ||= "";
   ACCIONES_FILTER_STATE.eje   ||= "";
   ACCIONES_FILTER_STATE.linea ||= "";
 
-  // 🔹 BASE por año (datos reales)
-  const base = (Array.isArray(ALL) ? ALL : []).filter(r => {
+  const vf = VALIDATIONS?.validaciones_filtros || {};
+  const vfYear = year && vf[year] ? vf[year] : null;
+
+  // Base por año (datos reales)
+  const baseByYear = (Array.isArray(ALL) ? ALL : []).filter(r => {
     if (!year) return true;
     return yearFromIso_(r.fecha_accion) === year;
   });
 
-  // 🔹 TIPO DE ACCIÓN desde VALIDACIONES_FILTRADAS POR AÑO
-  // Estructura esperada:
-  // VALIDATIONS.validaciones_filtros = { "2024": { tipo_accion:[...] }, "2025": {...} }
-  let tipos = [];
-  const vf = VALIDATIONS?.validaciones_filtros || {};
-  if (year && vf[year] && Array.isArray(vf[year].tipo_accion)) {
-    tipos = vf[year].tipo_accion.slice();
-  } else {
-    // fallback: lo que exista en los datos
-    tipos = uniqSorted_(base.map(r => r.tipo_accion));
-  }
+  const getLinea_ = (r) => r.lineaTematica || r.linea_tematica || r.subeje || "";
+  const filterRows_ = (rows, f) => {
+    return (rows || []).filter(r => {
+      if (f.tipo && normText(r.tipo_accion) !== normText(f.tipo)) return false;
+      if (f.eje && normText(r.eje) !== normText(f.eje)) return false;
+      if (f.linea && normText(getLinea_(r)) !== normText(f.linea)) return false;
+      return true;
+    });
+  };
 
-  const ejes   = uniqSorted_(base.map(r => r.eje));
-  const lineas = uniqSorted_(base.map(r => r.lineaTematica || r.linea_tematica || r.subeje));
+  const applyVFOrder_ = (dataList, vfList) => {
+    if (Array.isArray(vfList) && vfList.length){
+      const keep = new Set((dataList || []).map(v => normText(v)));
+      return vfList.filter(v => keep.has(normText(v)));
+    }
+    return dataList;
+  };
+
+  // Opciones dependientes (cascada)
+  const baseForTipo  = filterRows_(baseByYear, { eje: ACCIONES_FILTER_STATE.eje, linea: ACCIONES_FILTER_STATE.linea });
+  const baseForEje   = filterRows_(baseByYear, { tipo: ACCIONES_FILTER_STATE.tipo, linea: ACCIONES_FILTER_STATE.linea });
+  const baseForLinea = filterRows_(baseByYear, { tipo: ACCIONES_FILTER_STATE.tipo, eje: ACCIONES_FILTER_STATE.eje });
+
+  let tipos = uniqSorted_(baseForTipo.map(r => r.tipo_accion));
+  let ejes  = uniqSorted_(baseForEje.map(r => r.eje));
+  let lineas = uniqSorted_(baseForLinea.map(r => getLinea_(r)));
+
+  tipos  = applyVFOrder_(tipos,  vfYear?.tipo_accion);
+  ejes   = applyVFOrder_(ejes,   vfYear?.eje);
+  lineas = applyVFOrder_(lineas, vfYear?.lineaTematica);
 
   if (ACCIONES_FILTER_STATE.tipo && !tipos.includes(ACCIONES_FILTER_STATE.tipo)) {
     ACCIONES_FILTER_STATE.tipo = "";
@@ -637,10 +656,25 @@ function buildAccionesFilterOptions_(){
     ACCIONES_FILTER_STATE.linea = "";
   }
 
+  // Selects (layout actual)
+  const tipoSel = document.getElementById("tipoAccionFiltro");
+  const ejeSel = document.getElementById("ejeGobFiltro");
+  const lineaSel = document.getElementById("lineaTematicaFiltro");
+
+  fillSelect_(tipoSel, tipos, { includeTodos:true });
+  fillSelect_(ejeSel, ejes, { includeTodos:true });
+  fillSelect_(lineaSel, lineas, { includeTodos:true });
+
+  if (tipoSel) tipoSel.value = ACCIONES_FILTER_STATE.tipo || "";
+  if (ejeSel) ejeSel.value = ACCIONES_FILTER_STATE.eje || "";
+  if (lineaSel) lineaSel.value = ACCIONES_FILTER_STATE.linea || "";
+
+  // Chips (si existen)
   buildSliderChips_(document.getElementById("segTipoAccion"), tipos, {
     selected: ACCIONES_FILTER_STATE.tipo,
     onChange: (v) => {
       ACCIONES_FILTER_STATE.tipo = v;
+      buildAccionesFilterOptions_();
       applyFilters();
     }
   });
@@ -649,6 +683,7 @@ function buildAccionesFilterOptions_(){
     selected: ACCIONES_FILTER_STATE.eje,
     onChange: (v) => {
       ACCIONES_FILTER_STATE.eje = v;
+      buildAccionesFilterOptions_();
       applyFilters();
     }
   });
@@ -657,6 +692,7 @@ function buildAccionesFilterOptions_(){
     selected: ACCIONES_FILTER_STATE.linea,
     onChange: (v) => {
       ACCIONES_FILTER_STATE.linea = v;
+      buildAccionesFilterOptions_();
       applyFilters();
     }
   });
@@ -716,6 +752,7 @@ function clearAccionesFilters_(){
   setSegmentValue_(FILTERS.acciones.segEje, "");
   setSegmentValue_(FILTERS.acciones.segLinea, "");
 
+  buildAccionesFilterOptions_();
   applyFilters();
 }
 
@@ -749,6 +786,7 @@ if (FILTERS.acciones.year){
   if (tipoSel){
     tipoSel.addEventListener("change", e=>{
       ACCIONES_FILTER_STATE.tipo = e.target.value || "";
+      buildAccionesFilterOptions_();
       applyFilters();
     });
   }
@@ -757,6 +795,7 @@ if (FILTERS.acciones.year){
   if (ejeSel){
     ejeSel.addEventListener("change", e=>{
       ACCIONES_FILTER_STATE.eje = e.target.value || "";
+      buildAccionesFilterOptions_();
       applyFilters();
     });
   }
@@ -765,6 +804,7 @@ if (FILTERS.acciones.year){
   if (lineaSel){
     lineaSel.addEventListener("change", e=>{
       ACCIONES_FILTER_STATE.linea = e.target.value || "";
+      buildAccionesFilterOptions_();
       applyFilters();
     });
   }
@@ -1327,6 +1367,7 @@ if (FILTERS.acciones.btnClear){
 
   function openEdit(row){
     EDIT_ROW = row;
+    if (document.body) document.body.classList.add("modal-hide-header");
 
     $("editTitle").textContent = `Editar • ${row.nombre_accion || row.id_accion || ""}`;
     $("editHint").textContent = `ID: ${row.id_accion} • Fila: ${row.rowNumber}`;
@@ -1376,12 +1417,13 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
 
   function closeEdit(){
     $("editBack").style.display = "none";
+    if (document.body) document.body.classList.remove("modal-hide-header");
     EDIT_ROW = null;
     entItems = [];
     perItems = [];
   }
 
- function collectEditPayload(){
+  function collectEditPayload(){
   const isoAccion = String($("f_fecha_accion_iso")?.value || "").trim();
   if (!isoAccion) throw new Error("Fecha de acción es obligatoria.");
 
@@ -1447,6 +1489,247 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
         alert("Error guardando: " + (err?.message || err));
       })
       .updateAccion(EDIT_ROW.rowNumber, payload);
+  }
+
+  function exportEditFicha(){
+    if (!EDIT_ROW) {
+      alert("No hay una acción abierta para exportar.");
+      return;
+    }
+
+    const row = EDIT_ROW;
+    const getVal = (v) => String(v ?? "").trim();
+    const getSel = (combo) => getVal(combo?.getSelection().value || "");
+
+    const linea = getSel(COMBOS.lineaTematica) || getVal(row.lineaTematica || row.subeje || "");
+    const data = [
+      ["ID acción", getVal(row.id_accion)],
+      ["Nombre", getVal(row.nombre_accion)],
+      ["Fecha acción", getVal($("f_fecha_accion_iso")?.value || row.fecha_accion)],
+      ["Estado", getSel(COMBOS.estado_accion) || getVal(row.estado_accion)],
+      ["Tipo de acción", getSel(COMBOS.tipo_accion) || getVal(row.tipo_accion)],
+      ["Eje de gobierno", getSel(COMBOS.eje) || getVal(row.eje)],
+      ["Línea temática", linea],
+      ["Producción", getSel(COMBOS.prod_tipo) || getVal(row.produccion)],
+      ["Área GCBA 1", getSel(COMBOS.area1) || getVal(row.area_gcba_org_1_id)],
+      ["Área GCBA 2", getSel(COMBOS.area2) || getVal(row.area_gcba_org_2_id)],
+      ["Área GCBA 3", getSel(COMBOS.area3) || getVal(row.area_gcba_org_3_id)],
+      ["Ente 1", getSel(COMBOS.ente1) || getVal(row.ente_org_1_id)],
+      ["Ente 2", getSel(COMBOS.ente2) || getVal(row.ente_org_2_id)],
+      ["Ente 3", getSel(COMBOS.ente3) || getVal(row.ente_org_3_id)],
+      ["Lugar", getSel(COMBOS.lugar) || getVal(row.lugar)],
+      ["Territorio", getSel(COMBOS.territorio) || getVal(row.territorio)],
+      ["Contratación personal", getSel(COMBOS.contratacion) || getVal(row.contratacion_personal)],
+      ["Tipo indicador", getSel(COMBOS.meta_tipo) || getVal(row.meta_tipo)],
+      ["Impacto numérico", getVal($("f_impacto_numerico")?.value || row.impacto_numerico)],
+      ["Comentarios", getVal($("f_comentarios")?.value || row.comentarios)],
+      ["Participantes (Entidad)", (entItems || []).map(p => p.name || p.id).join(" | ")],
+      ["Participantes (Persona)", (perItems || []).map(p => p.name || p.id).join(" | ")],
+    ];
+    exportFichaAsHtml_(data, row);
+  }
+
+  function exportFichaAsHtml_(data, row){
+    const esc = (s) => String(s || "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+
+    const meta = {
+      id: esc(row?.id_accion || ""),
+      nombre: esc(row?.nombre_accion || ""),
+    };
+
+    const rowsHtml = data.map(([k,v]) => {
+      return `
+        <div class="kv">
+          <div class="k">${esc(k)}</div>
+          <div class="v">${esc(v)}</div>
+        </div>
+      `;
+    }).join("");
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ficha - ${meta.id || "Acción"}</title>
+  <style>
+    :root{
+      --gcba-blue:#153244;
+      --gcba-yellow:#FFCC00;
+      --gcba-cyan:#8DE2D6;
+      --gcba-gray:#3C3C3B;
+      --bg:#F7FAFB;
+      --line:#E3ECF0;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: "Archivo", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--gcba-blue);
+    }
+    .page{
+      max-width: 980px;
+      margin: 28px auto;
+      padding: 22px;
+    }
+    .card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 16px 30px rgba(21,50,68,.08);
+      overflow:hidden;
+    }
+    .head{
+      padding: 22px 26px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, #FFFFFF, #F8FCFC);
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:flex-start;
+    }
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .brand .kicker{
+      font-weight:900;
+      letter-spacing:.5px;
+      color: var(--gcba-gray);
+      font-size:12px;
+      text-transform: uppercase;
+    }
+    .brand .title{
+      font-weight:900;
+      font-size:26px;
+      color: var(--gcba-blue);
+    }
+    .brand .sub{
+      font-weight:700;
+      font-size:13px;
+      color: rgba(60,60,59,.85);
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(141,226,214,.75);
+      background: rgba(141,226,214,.22);
+      font-weight:900;
+      font-size:12px;
+      white-space:nowrap;
+      color: var(--gcba-blue);
+    }
+    .content{
+      padding: 22px 26px 26px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px 26px;
+    }
+    .kv{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background:#fff;
+    }
+    .k{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.6px;
+      color: rgba(60,60,59,.85);
+      text-transform: uppercase;
+      margin-bottom:6px;
+    }
+    .v{
+      font-size:14px;
+      font-weight:700;
+      color: var(--gcba-blue);
+      line-height:1.35;
+      white-space: pre-wrap;
+    }
+    .footer{
+      padding: 14px 26px 18px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      color: rgba(60,60,59,.8);
+      font-weight:700;
+      font-size:12px;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top: 14px;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .btn.primary{
+      background: var(--gcba-blue);
+      color:#fff;
+      border-color: rgba(21,50,68,.35);
+    }
+    @media print{
+      body{ background:#fff; }
+      .page{ margin:0; padding:0; }
+      .actions{ display:none; }
+      .card{ box-shadow:none; border:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="actions">
+      <button class="btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+      <button class="btn primary" onclick="window.close()">Cerrar</button>
+    </div>
+    <div class="card">
+      <div class="head">
+        <div class="brand">
+          <div class="kicker">GCBA Responsabilidad Social</div>
+          <div class="title">Ficha de acción</div>
+          <div class="sub">${meta.nombre}</div>
+        </div>
+        <div class="chip">${meta.id || "Sin ID"}</div>
+      </div>
+      <div class="content">
+        ${rowsHtml}
+      </div>
+      <div class="footer">
+        <div>Generado: ${esc(new Date().toLocaleString("es-AR"))}</div>
+        <div>RS • Acciones</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    const w = window.open("", "_blank", "width=1100,height=900");
+    if (!w) {
+      alert("El navegador bloqueó la ventana emergente.");
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   }
 
   // =========================
@@ -4362,6 +4645,10 @@ if ($("btnClear") && !$("btnClear").__bound){
   if ($("btnSave") && !$("btnSave").__bound){
     $("btnSave").__bound = true;
     $("btnSave").addEventListener("click", saveEdit);
+  }
+  if ($("btnEditExport") && !$("btnEditExport").__bound){
+    $("btnEditExport").__bound = true;
+    $("btnEditExport").addEventListener("click", exportEditFicha);
   }
 
   // Entidades modal

@@ -11,7 +11,7 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div class="title">RS • Acciones</div>
+        <div class="title">Administración de Acciones</div>
         <div class="sub" id="buildInfo">Cargando…</div>
       </div>
 
@@ -40,53 +40,46 @@
       <div class="panel">
 
 <div class="listHeader" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-  <h2 class="listTitle" style="margin:0;">Listado</h2>
+  <div class="adminTitle" style="margin:0;">Tablero de acciones</div>
 
-  <div style="display:flex; gap:10px; align-items:center;">
-    <button class="btn" id="btnRefresh">Refrescar</button>
-    <button class="btn primary" id="btnExport">Exportar (Excel)</button>
-  </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="btn" id="btnClear">Limpiar</button>
+      <button class="btn" id="btnRefresh">Refrescar</button>
+      <button class="btn primary" id="btnExport">Exportar (Excel)</button>
+    </div>
 </div>
 
         <div class="filters listFilters">
-          <div>
+          <div class="filterField top-search">
             <label for="q">Buscar</label>
             <input id="q" class="input" placeholder='Ej: "Bienestar" / "Realizado" / "AR-010"...' />
           </div>
-<!-- Año -->
-<div>
-  <label for="anioFiltro">Año</label>
-  <select id="anioFiltro" class="input">
-    <option value="">Todos</option>
-  </select>
-</div>
 
-<!-- Tipo de acción -->
-<div>
-  <label for="tipoAccionFiltro">Tipo de acción</label>
-  <select id="tipoAccionFiltro" class="input"></select>
-</div>
-
-<!-- Eje de gobierno -->
-<div>
-  <label for="ejeGobFiltro">Eje de gobierno</label>
-  <select id="ejeGobFiltro" class="input"></select>
-</div>
-
-<!-- Línea temática -->
-<div>
-  <label for="lineaTematicaFiltro">Línea temática</label>
-  <select id="lineaTematicaFiltro" class="input"></select>
-</div>
-
-          <div>
-            <label for="estadoFiltro">Estado</label>
-            <select id="estadoFiltro"></select>
+          <div class="filterField">
+            <label for="anioFiltro">Año</label>
+            <select id="anioFiltro" class="input">
+              <option value="">Todos</option>
+            </select>
           </div>
 
-          <div class="filtersActions">
-            <label>&nbsp;</label>
-            <button class="btn" id="btnClear">Limpiar</button>
+          <div class="filterField">
+            <label for="estadoFiltro">Estado</label>
+            <select id="estadoFiltro" class="input"></select>
+          </div>
+
+          <div class="filterField">
+            <label for="tipoAccionFiltro">Tipo de acción</label>
+            <select id="tipoAccionFiltro" class="input"></select>
+          </div>
+
+          <div class="filterField">
+            <label for="ejeGobFiltro">Eje de gobierno</label>
+            <select id="ejeGobFiltro" class="input"></select>
+          </div>
+
+          <div class="filterField">
+            <label for="lineaTematicaFiltro">Línea temática</label>
+            <select id="lineaTematicaFiltro" class="input"></select>
           </div>
         </div>
 
@@ -118,8 +111,7 @@
         <div class="entBoard">
 
           <div>
-            <h2 style="margin:0;">TABLERO ENTIDADES</h2>
-            <div class="hint" style="margin-top:6px;">Entidades privadas, Áreas GCBA y Personas.</div>
+            <div class="adminTitle" style="margin:0;">Tablero de entidades</div>
           </div>
 
           <div class="entBar">
@@ -202,10 +194,7 @@
       <div class="panel">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
           <div>
-            <h2 style="margin:0;">Cargar acción</h2>
-            <div class="hint" id="createHint" style="margin-top:6px;">
-              Se genera <b>ID</b> automático al guardar. Campos habilitados según <b>Estado</b>.
-            </div>
+            <div class="adminTitle" style="margin:0;">Carga de acciones</div>
           </div>
 
           <div class="rowBtns">
@@ -395,11 +384,7 @@
 
         <div class="adminHeader" style="align-items:flex-start;">
           <div class="adminHeaderLeft">
-            <div class="adminKicker">CARGA</div>
-            <div class="adminTitle">Carga de Entidades</div>
-            <div class="adminSub">
-              Alta de <b>Entidades</b> + <b>Persona de contacto</b> (se guarda en <b>ENTIDADES_PRIVADAS</b> y <b>PERSONAS</b>)
-            </div>
+            <div class="adminTitle">Carga de entidades</div>
           </div>
 
           <div class="adminHeaderRight" style="display:flex; gap:10px; align-items:center;">
@@ -488,49 +473,57 @@
               </div>
             </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>Nombre *</label>
-                <input id="ep_con_nombre" class="input" placeholder="..." />
-              </div>
-              <div>
-                <label>Apellido *</label>
-                <input id="ep_con_apellido" class="input" placeholder="..." />
-              </div>
-            </div>
+            <div id="ep_contacts">
+              <div class="contactBlock" data-contact="0">
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>Nombre *</label>
+                    <input id="ep_con_nombre" class="input" placeholder="..." data-field="nombre" />
+                  </div>
+                  <div>
+                    <label>Apellido *</label>
+                    <input id="ep_con_apellido" class="input" placeholder="..." data-field="apellido" />
+                  </div>
+                </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>Cargo</label>
-                <input id="ep_con_cargo" class="input" placeholder="Ej: Coordinación / Referente..." />
-              </div>
-              <div>
-                <label>Mail</label>
-                <input id="ep_con_mail" class="input" placeholder="nombre@..." />
-              </div>
-            </div>
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>Cargo</label>
+                    <input id="ep_con_cargo" class="input" placeholder="Ej: Coordinación / Referente..." data-field="cargo" />
+                  </div>
+                  <div>
+                    <label>Mail</label>
+                    <input id="ep_con_mail" class="input" placeholder="nombre@..." data-field="mail" />
+                  </div>
+                </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>Teléfono</label>
-                <input id="ep_con_telefono" class="input" placeholder="..." />
-              </div>
-              <div>
-                <label>DNI</label>
-                <input id="ep_con_dni" class="input" placeholder="..." />
-              </div>
-            </div>
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>Teléfono</label>
+                    <input id="ep_con_telefono" class="input" placeholder="..." data-field="telefono" />
+                  </div>
+                  <div>
+                    <label>DNI</label>
+                    <input id="ep_con_dni" class="input" placeholder="..." data-field="dni" />
+                  </div>
+                </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div style="grid-column:1 / -1;">
-                <label>Red de Discapacidad (auto)</label>
-                <input id="ep_con_red_discapacidad" class="input" disabled />
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div style="grid-column:1 / -1;">
+                    <label>Red de Discapacidad (auto)</label>
+                    <input id="ep_con_red_discapacidad" class="input" disabled data-field="red_discapacidad" />
+                  </div>
+                </div>
+
+                <div style="margin-top:10px;">
+                  <label>Observaciones</label>
+                  <textarea id="ep_con_observaciones" placeholder="Notas, acuerdos, etc." data-field="observaciones"></textarea>
+                </div>
               </div>
             </div>
 
             <div style="margin-top:10px;">
-              <label>Observaciones</label>
-              <textarea id="ep_con_observaciones" placeholder="Notas, acuerdos, etc."></textarea>
+              <button class="btn" id="ep_add_contact">Agregar contacto +</button>
             </div>
 
             <div class="hint" id="ep_contacto_hint" style="margin-top:10px;">
@@ -574,56 +567,64 @@
           <div class="section" style="margin-top:14px;">
             <div class="sectionTitle">PERSONA (CONTACTO)</div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>Nombre *</label>
-                <input id="ac_con_nombre" class="input" placeholder="..." />
-              </div>
-              <div>
-                <label>Apellido *</label>
-                <input id="ac_con_apellido" class="input" placeholder="..." />
-              </div>
-            </div>
+            <div id="ac_contacts">
+              <div class="contactBlock" data-contact="0">
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>Nombre *</label>
+                    <input id="ac_con_nombre" class="input" placeholder="..." data-field="nombre" />
+                  </div>
+                  <div>
+                    <label>Apellido *</label>
+                    <input id="ac_con_apellido" class="input" placeholder="..." data-field="apellido" />
+                  </div>
+                </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>Cargo</label>
-                <input id="ac_con_cargo" class="input" placeholder="Ej: Referente / Coordinación..." />
-              </div>
-              <div>
-                <label>Rol</label>
-                <input id="ac_con_rol" class="input" placeholder="Ej: Punto focal / Responsable..." />
-              </div>
-            </div>
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>Cargo</label>
+                    <input id="ac_con_cargo" class="input" placeholder="Ej: Referente / Coordinación..." data-field="cargo" />
+                  </div>
+                  <div>
+                    <label>Rol</label>
+                    <input id="ac_con_rol" class="input" placeholder="Ej: Punto focal / Responsable..." data-field="rol" />
+                  </div>
+                </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>Mail</label>
-                <input id="ac_con_mail" class="input" placeholder="nombre@..." />
-              </div>
-              <div>
-                <label>Teléfono</label>
-                <input id="ac_con_telefono" class="input" placeholder="..." />
-              </div>
-            </div>
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>Mail</label>
+                    <input id="ac_con_mail" class="input" placeholder="nombre@..." data-field="mail" />
+                  </div>
+                  <div>
+                    <label>Teléfono</label>
+                    <input id="ac_con_telefono" class="input" placeholder="..." data-field="telefono" />
+                  </div>
+                </div>
 
-            <div class="adminFormGrid2" style="margin-top:10px;">
-              <div>
-                <label>DNI</label>
-                <input id="ac_con_dni" class="input" placeholder="..." />
-              </div>
-              <div>
-                <label>Red de Discapacidad</label>
-                <select id="ac_con_red_discapacidad" class="input selectDark">
-                  <option value="No" selected>No</option>
-                  <option value="Sí">Sí</option>
-                </select>
+                <div class="adminFormGrid2" style="margin-top:10px;">
+                  <div>
+                    <label>DNI</label>
+                    <input id="ac_con_dni" class="input" placeholder="..." data-field="dni" />
+                  </div>
+                  <div>
+                    <label>Red de Discapacidad</label>
+                    <select id="ac_con_red_discapacidad" class="input selectDark" data-field="red_discapacidad">
+                      <option value="No" selected>No</option>
+                      <option value="Sí">Sí</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style="margin-top:10px;">
+                  <label>Observaciones</label>
+                  <textarea id="ac_con_observaciones" placeholder="Notas, acuerdos, etc." data-field="observaciones"></textarea>
+                </div>
               </div>
             </div>
 
             <div style="margin-top:10px;">
-              <label>Observaciones</label>
-              <textarea id="ac_con_observaciones" placeholder="Notas, acuerdos, etc."></textarea>
+              <button class="btn" id="ac_add_contact">Agregar contacto +</button>
             </div>
 
             <div class="hint" style="margin-top:10px;">
@@ -737,11 +738,7 @@
 
     <div class="adminHeader">
       <div class="adminHeaderLeft">
-        <div class="adminKicker">MEDICIONES</div>
         <div class="adminTitle">RS • Mediciones</div>
-        <div class="adminSub">
-          Estadísticas de acciones por <b>año</b>, <b>línea temática</b> y <b>estado</b>.
-        </div>
       </div>
 
       <div class="adminHeaderRight">
@@ -856,10 +853,10 @@
   <div class="panel adminShell">
 
     <!-- Header -->
-    <div class="adminHeader">
-      <div class="adminHeaderLeft">
-        <div class="adminTitle">RS • Calendario</div>
-      </div>
+      <div class="adminHeader">
+        <div class="adminHeaderLeft">
+          <div class="adminTitle">Calendario</div>
+        </div>
 
       <div class="adminHeaderRight">
         <div class="adminBuildPill" id="calBuildPill">Build: —</div>
@@ -899,27 +896,11 @@
       </div>
     </div>
 
-    <!-- Card principal -->
-    <div class="adminCard" id="calCard_main" style="margin-top:12px;">
-      <div class="adminCardHead" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-        <div>
-          <div class="adminCardTitle" id="calTitle">Calendario</div>
-          <div class="adminCardDesc" id="calDesc" style="margin-top:4px;">
-            Mostrando acciones del mes —.
-          </div>
-        </div>
-
-        <div style="display:flex; align-items:center; gap:10px;">
-          <!-- (Opcional) Selector rápido de mes/año si querés después -->
-          <div class="adminTag">CAL</div>
-        </div>
-      </div>
-
-<!-- Contenido: Layout 1 columna (solo calendario) -->
-<div id="calLayout" style="
-  margin-top:12px;
-  display:block;
-">
+      <!-- Contenido: Layout 1 columna (solo calendario) -->
+      <div id="calLayout" style="
+        margin-top:12px;
+        display:block;
+      ">
 
   <!-- ====== CALENDARIO ====== -->
   <div class="adminMini" style="margin:0;">
@@ -971,8 +952,7 @@
     </div>
   </div>
 
-</div><!-- /calLayout -->
-    </div><!-- /adminCard -->
+      </div><!-- /calLayout -->
 
     <!-- Footer meta -->
     <div class="footerMeta" style="margin-top:14px;">
@@ -996,6 +976,7 @@
       <div class="modalHead">
         <div class="modalTitle" id="editTitle">Editar acción</div>
         <div class="rowBtns">
+          <button class="btn" id="btnEditExport">Exportar ficha</button>
           <button class="btn primary" id="btnSave">Guardar</button>
           <button class="btn" id="btnClose">Cerrar</button>
         </div>
@@ -1176,6 +1157,110 @@
       </div>
     </div>
   </div>
+
+  <!-- Templates: Contacto extra (Admin) -->
+  <template id="ep_contact_tpl">
+    <div class="contactBlock" data-contact="1" style="margin-top:10px; border-top:1px dashed var(--line); padding-top:10px;">
+      <div class="adminFormGrid2">
+        <div>
+          <label>Nombre *</label>
+          <input class="input" placeholder="..." data-field="nombre" />
+        </div>
+        <div>
+          <label>Apellido *</label>
+          <input class="input" placeholder="..." data-field="apellido" />
+        </div>
+      </div>
+      <div class="adminFormGrid2" style="margin-top:10px;">
+        <div>
+          <label>Cargo</label>
+          <input class="input" placeholder="Ej: Coordinación / Referente..." data-field="cargo" />
+        </div>
+        <div>
+          <label>Mail</label>
+          <input class="input" placeholder="nombre@..." data-field="mail" />
+        </div>
+      </div>
+      <div class="adminFormGrid2" style="margin-top:10px;">
+        <div>
+          <label>Teléfono</label>
+          <input class="input" placeholder="..." data-field="telefono" />
+        </div>
+        <div>
+          <label>DNI</label>
+          <input class="input" placeholder="..." data-field="dni" />
+        </div>
+      </div>
+      <div class="adminFormGrid2" style="margin-top:10px;">
+        <div style="grid-column:1 / -1;">
+          <label>Red de Discapacidad (auto)</label>
+          <input class="input" disabled data-field="red_discapacidad" />
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Observaciones</label>
+        <textarea placeholder="Notas, acuerdos, etc." data-field="observaciones"></textarea>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn" data-action="remove-contact">Quitar contacto</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="ac_contact_tpl">
+    <div class="contactBlock" data-contact="1" style="margin-top:10px; border-top:1px dashed var(--line); padding-top:10px;">
+      <div class="adminFormGrid2">
+        <div>
+          <label>Nombre *</label>
+          <input class="input" placeholder="..." data-field="nombre" />
+        </div>
+        <div>
+          <label>Apellido *</label>
+          <input class="input" placeholder="..." data-field="apellido" />
+        </div>
+      </div>
+      <div class="adminFormGrid2" style="margin-top:10px;">
+        <div>
+          <label>Cargo</label>
+          <input class="input" placeholder="Ej: Referente / Coordinación..." data-field="cargo" />
+        </div>
+        <div>
+          <label>Rol</label>
+          <input class="input" placeholder="Ej: Punto focal / Responsable..." data-field="rol" />
+        </div>
+      </div>
+      <div class="adminFormGrid2" style="margin-top:10px;">
+        <div>
+          <label>Mail</label>
+          <input class="input" placeholder="nombre@..." data-field="mail" />
+        </div>
+        <div>
+          <label>Teléfono</label>
+          <input class="input" placeholder="..." data-field="telefono" />
+        </div>
+      </div>
+      <div class="adminFormGrid2" style="margin-top:10px;">
+        <div>
+          <label>DNI</label>
+          <input class="input" placeholder="..." data-field="dni" />
+        </div>
+        <div>
+          <label>Red de Discapacidad</label>
+          <select class="input selectDark" data-field="red_discapacidad">
+            <option value="No" selected>No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Observaciones</label>
+        <textarea placeholder="Notas, acuerdos, etc." data-field="observaciones"></textarea>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn" data-action="remove-contact">Quitar contacto</button>
+      </div>
+    </div>
+  </template>
 
   <?!= include('App'); ?>
 </body>
