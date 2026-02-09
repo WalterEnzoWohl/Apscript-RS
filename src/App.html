@@ -22,6 +22,18 @@
   let cEntItems = [];
   let cPerItems = [];
 
+  // ===== Entidades (Tablero) =====
+  let ENT_ALL = [];
+  let ENT_FILTERED = [];
+  let ENT_KIND = "";
+  let ENT_COLUMNS = [];
+  let ENT_EDIT = { open:false, kind:"", rowNumber:null, row:null, columns:[] };
+  const ENT_LOCKED_FIELDS = {
+    entidad_privada: new Set(["id_ente","updated_at","update_user"]),
+    area_gcba: new Set(["id_area","updated_at","update_user","user"]),
+    persona: new Set(["id_persona","updated_at","update_user"]),
+  };
+
   // Combos
   const COMBOS = {};
   const CCOMBOS = {};
@@ -30,6 +42,9 @@
   const ACOMBOS = {};
 
   const $ = (id) => document.getElementById(id);
+
+  // Personas map (id -> name) para Tablero Entidades
+  const PERSONA_BY_ID = {};
 
 const ACCIONES_FILTER_STATE = {
   q: "",
@@ -690,6 +705,12 @@ function clearAccionesFilters_(){
   if (FILTERS.acciones.q) FILTERS.acciones.q.value = "";
   if (FILTERS.acciones.estado) FILTERS.acciones.estado.value = "";
   if (FILTERS.acciones.year) FILTERS.acciones.year.value = "";
+  const tipoSel = document.getElementById("tipoAccionFiltro");
+  if (tipoSel) tipoSel.value = "";
+  const ejeSel = document.getElementById("ejeGobFiltro");
+  if (ejeSel) ejeSel.value = "";
+  const lineaSel = document.getElementById("lineaTematicaFiltro");
+  if (lineaSel) lineaSel.value = "";
 
   setSegmentValue_(FILTERS.acciones.segTipo, "");
   setSegmentValue_(FILTERS.acciones.segEje, "");
@@ -723,6 +744,30 @@ if (FILTERS.acciones.year){
     applyFilters();
   });
 }
+
+  const tipoSel = document.getElementById("tipoAccionFiltro");
+  if (tipoSel){
+    tipoSel.addEventListener("change", e=>{
+      ACCIONES_FILTER_STATE.tipo = e.target.value || "";
+      applyFilters();
+    });
+  }
+
+  const ejeSel = document.getElementById("ejeGobFiltro");
+  if (ejeSel){
+    ejeSel.addEventListener("change", e=>{
+      ACCIONES_FILTER_STATE.eje = e.target.value || "";
+      applyFilters();
+    });
+  }
+
+  const lineaSel = document.getElementById("lineaTematicaFiltro");
+  if (lineaSel){
+    lineaSel.addEventListener("change", e=>{
+      ACCIONES_FILTER_STATE.linea = e.target.value || "";
+      applyFilters();
+    });
+  }
 
 
 if (FILTERS.acciones.btnClear){
@@ -1619,39 +1664,40 @@ function adminSetStatus(msg, kind="ok"){
 
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
-function prettyEntHeader(k){
-  const s = String(k || "").trim();
-  const MAP = {
-    // Entidades privadas
-    ente_id: "ID Entidad",
-    ente_nombre: "Entidad",
-    web: "Web",
-    direccion: "Dirección",
-    sector: "Sector",
-    rubro: "Rubro",
-    zona_cobertura: "Cobertura",
-    zona_comuna: "Comuna",
+  function prettyEntHeader(k){
+    const s = String(k || "").trim();
+    const MAP = {
+      // Entidades privadas
+      id_ente: "ID Entidad",
+      ente_nombre: "Entidad",
+      web: "Web",
+      direccion: "Dirección",
+      sector: "Sector",
+      rubro: "Rubro",
+      zona_cobertura: "Cobertura",
+      zona_comuna: "Comuna",
     estado_contacto: "Estado contacto",
     red_discapacidad: "Red discapacidad",
     observaciones: "Observaciones",
     activo: "Activo",
 
-    // Personas
-    persona_id: "ID Persona",
-    apellido: "Apellido",
-    nombre: "Nombre",
-    mail: "Mail",
-    telefono: "Teléfono",
-    dni: "DNI",
-    rol: "Rol",
-    area_id: "Área (ID)",
-    area_nombre: "Área",
-    gcba: "GCBA",
+      // Personas
+      id_persona: "ID Persona",
+      apellido: "Apellido",
+      nombre: "Nombre",
+      mail: "Mail",
+      telefono: "Teléfono",
+      dni: "DNI",
+      rol: "Rol",
+      area_id: "Área (ID)",
+      area_nombre: "Área",
+      gcba: "GCBA",
+      ente_nombre_ref: "Ente / Área vinculada",
 
-    // Áreas
-    area_gcba_id: "ID Área",
-    area_nombre: "Área GCBA",
-  };
+      // Áreas
+      id_area: "ID Área",
+      area_nombre: "Área GCBA",
+    };
 
   if (MAP[s]) return MAP[s];
 
@@ -1666,6 +1712,18 @@ function prettyEntHeader(k){
 }
 
 // ✅ llena selects de filtro según el tipo (solo para entidades privadas)
+function setEntFiltersVisibility(kind){
+  const wrap = $("entFilters");
+  const isPriv = (String(kind) === "entidad_privada");
+  if (wrap) wrap.style.display = isPriv ? "" : "none";
+
+  if (!isPriv){
+    if ($("entSector")) $("entSector").value = "";
+    if ($("entRubro")) $("entRubro").value = "";
+    if ($("entComuna")) $("entComuna").value = "";
+  }
+}
+
 function buildEntidadesFilterOptions(kind, rows){
   // si no existen en el HTML, no hace nada
   const elSector = $("entSector");
@@ -1676,12 +1734,14 @@ function buildEntidadesFilterOptions(kind, rows){
   // solo aplican a entidades privadas
   const isPriv = (String(kind) === "entidad_privada");
   if (!isPriv){
+    setEntFiltersVisibility(kind);
     if (elSector) elSector.innerHTML = `<option value="">(todos)</option>`;
     if (elRubro)  elRubro.innerHTML  = `<option value="">(todos)</option>`;
     if (elComuna) elComuna.innerHTML = `<option value="">(todos)</option>`;
     // opcional: ocultarlos si querés (depende tu HTML)
     return;
   }
+  setEntFiltersVisibility(kind);
 
   const uniq = (arr)=> Array.from(new Set(arr.map(x=>String(x||"").trim()).filter(Boolean)))
     .sort((a,b)=> a.localeCompare(b, "es", { sensitivity:"base" }));
@@ -2105,6 +2165,7 @@ function buildEntidadPrivadaControls(){
       if ($("ep_con_red_discapacidad")){
         $("ep_con_red_discapacidad").value = (rd === "Sí") ? "Sí" : "No";
       }
+      syncEntidadRedDiscapacidadToContacts_();
     }
   });
 
@@ -2116,6 +2177,7 @@ function buildEntidadPrivadaControls(){
 
   // primer sync a persona
   if ($("ep_con_red_discapacidad")) $("ep_con_red_discapacidad").value = "No";
+  syncEntidadRedDiscapacidadToContacts_();
 }
 function clearEntidadPrivadaForm(){
   // Entidad
@@ -2149,6 +2211,92 @@ function clearEntidadPrivadaForm(){
   // UI result box
   if ($("ep_result_meta")) $("ep_result_meta").textContent = "—";
   if ($("ep_result_box")) $("ep_result_box").innerHTML = `<div class="muted">Todavía no se guardó nada.</div>`;
+
+  // limpiar contactos extra
+  const wrap = $("ep_contacts");
+  if (wrap){
+    wrap.querySelectorAll(".contactBlock").forEach((b, i)=>{
+      if (i === 0) return;
+      b.remove();
+    });
+  }
+}
+
+function getContactValue_(block, field){
+  const el = block.querySelector(`[data-field="${field}"]`);
+  return String(el?.value || "").trim();
+}
+
+function isEmptyContactBlock_(block){
+  const fields = ["nombre","apellido","cargo","rol","mail","telefono","dni","observaciones"];
+  return fields.every(f => !getContactValue_(block, f));
+}
+
+function collectEntidadPrivadaContactos_(enteNombre, redDisc){
+  const wrap = $("ep_contacts");
+  const blocks = wrap ? Array.from(wrap.querySelectorAll(".contactBlock")) : [];
+  const contactos = [];
+
+  blocks.forEach((b)=>{
+    if (isEmptyContactBlock_(b)) return;
+    const nombre = getContactValue_(b, "nombre");
+    const apellido = getContactValue_(b, "apellido");
+    if (nombre.length < 2 || apellido.length < 2){
+      throw new Error("Contacto: nombre y apellido son obligatorios (mín 2).");
+    }
+    contactos.push({
+      ente_nombre_ref: enteNombre,
+      nombre,
+      apellido,
+      cargo: getContactValue_(b, "cargo"),
+      mail: getContactValue_(b, "mail"),
+      telefono: getContactValue_(b, "telefono"),
+      dni: getContactValue_(b, "dni"),
+      observaciones: getContactValue_(b, "observaciones"),
+      red_discapacidad: (redDisc === "Sí") ? "Sí" : "No",
+      gcba: "NO",
+    });
+  });
+
+  if (!contactos.length){
+    throw new Error("Persona de contacto obligatoria: Nombre y Apellido (mín 2).");
+  }
+  return contactos;
+}
+
+function syncEntidadRedDiscapacidadToContacts_(){
+  const rd = String(ACOMBOS.ep_red_discapacidad?.getSelection().value || "No").trim();
+  const wrap = $("ep_contacts");
+  if (!wrap) return;
+  wrap.querySelectorAll('[data-field="red_discapacidad"]').forEach(el=>{
+    el.value = (rd === "Sí") ? "Sí" : "No";
+  });
+}
+
+function addEntidadContactoBlock_(){
+  const wrap = $("ep_contacts");
+  const tpl = document.getElementById("ep_contact_tpl");
+  if (!wrap || !tpl) return;
+
+  const frag = tpl.content.cloneNode(true);
+  const block = frag.querySelector(".contactBlock");
+  if (!block) return;
+
+  // set red discapacidad auto
+  const rd = String(ACOMBOS.ep_red_discapacidad?.getSelection().value || "No").trim();
+  const rdEl = block.querySelector('[data-field="red_discapacidad"]');
+  if (rdEl) rdEl.value = (rd === "Sí") ? "Sí" : "No";
+
+  // remove button
+  const rm = block.querySelector('[data-action="remove-contact"]');
+  if (rm){
+    rm.addEventListener("click", (e)=>{
+      e.preventDefault();
+      block.remove();
+    });
+  }
+
+  wrap.appendChild(block);
 }
 
 function collectEntidadPrivadaPayload(){
@@ -2176,13 +2324,6 @@ function collectEntidadPrivadaPayload(){
   const web = String($("ep_web")?.value || "").trim();
   const direccion = String($("ep_direccion")?.value || "").trim();
 
-  // Persona contacto
-  const con_nombre = String($("ep_con_nombre")?.value || "").trim();
-  const con_apellido = String($("ep_con_apellido")?.value || "").trim();
-  if (con_nombre.length < 2 || con_apellido.length < 2){
-    throw new Error("Persona de contacto obligatoria: Nombre y Apellido (mín 2).");
-  }
-
   // ✅ entidad
   const entidad = {
     ente_nombre,
@@ -2197,20 +2338,8 @@ function collectEntidadPrivadaPayload(){
     observaciones: String($("ep_observaciones")?.value || "").trim(),
   };
 
-  // ✅ contacto (red discapacidad se autocompleta desde entidad)
-  const contacto = {
-    ente_nombre_ref: ente_nombre,
-    nombre: con_nombre,
-    apellido: con_apellido,
-    cargo: String($("ep_con_cargo")?.value || "").trim(),
-    mail: String($("ep_con_mail")?.value || "").trim(),
-    telefono: String($("ep_con_telefono")?.value || "").trim(),
-    dni: String($("ep_con_dni")?.value || "").trim(),
-    observaciones: String($("ep_con_observaciones")?.value || "").trim(),
-    red_discapacidad: (red_discapacidad === "Sí") ? "Sí" : "No",
-  };
-
-  return { entidad, contacto };
+  const contactos = collectEntidadPrivadaContactos_(ente_nombre, red_discapacidad);
+  return { entidad, contactos };
 }
 
   function saveEntidadPrivadaWithContacto(){
@@ -2229,17 +2358,18 @@ function collectEntidadPrivadaPayload(){
 
     google.script.run
       .withSuccessHandler((res)=>{
-        // Esperado del backend: { ok:true, ente_id:"EN-001", persona_id:"PE-0001", message:"..." }
+        // Esperado del backend: { ok:true, ente_id:"EN-001", persona_ids:["PE-0001","PE-0002"], message:"..." }
         const ok = !!res?.ok;
         const enteId = res?.ente_id || res?.enteId || "";
-        const perId = res?.persona_id || res?.personaId || "";
+        const perIds = Array.isArray(res?.persona_ids) ? res.persona_ids : (res?.persona_id ? [res.persona_id] : []);
+        const perLabel = perIds.length ? perIds.join(" | ") : "";
 
         if ($("ep_result_meta")) $("ep_result_meta").textContent = ok ? "OK" : "—";
         if ($("ep_result_box")){
           $("ep_result_box").innerHTML = ok
             ? `<div class="adminRow">
                  <div class="id">${escapeHtml(enteId || "EN-—")}</div>
-                 <div class="name">Entidad creada • contacto: <b>${escapeHtml(perId || "PE-—")}</b></div>
+                 <div class="name">Entidad creada • contactos: <b>${escapeHtml(perLabel || "PE-—")}</b></div>
                </div>
                <div class="muted" style="margin-top:8px;">${escapeHtml(res?.message || "Guardado OK")}</div>`
             : `<div class="muted">Respuesta inesperada. ${escapeHtml(res?.message || "")}</div>`;
@@ -2356,6 +2486,15 @@ function exportFilteredAccionesXLSX(){
       bClear.__bound = true;
       bClear.addEventListener("click", clearEntidadPrivadaForm);
     }
+
+    const bAdd = $("ep_add_contact");
+    if (bAdd && !bAdd.__bound){
+      bAdd.__bound = true;
+      bAdd.addEventListener("click", (e)=>{
+        e.preventDefault();
+        addEntidadContactoBlock_();
+      });
+    }
       // ✅ Mostrar entidad vinculada (live)
   const entInput = $("ep_ente_nombre");
   const entLbl = $("ep_con_entidad_lbl");
@@ -2371,6 +2510,7 @@ function exportFilteredAccionesXLSX(){
   if ($("ep_con_red_discapacidad")){
     $("ep_con_red_discapacidad").value = (rd === "Sí") ? "Sí" : "No";
   }
+  syncEntidadRedDiscapacidadToContacts_();
   }
 // =========================
 // ✅ Admin: Personas reconocidas (PERSONAS)
@@ -2505,34 +2645,75 @@ function clearAreaContactoForm(){
   // UI result box
   if ($("ac_result_meta")) $("ac_result_meta").textContent = "—";
   if ($("ac_result_box")) $("ac_result_box").innerHTML = `<div class="muted">Todavía no se guardó nada.</div>`;
+
+  const wrap = $("ac_contacts");
+  if (wrap){
+    wrap.querySelectorAll(".contactBlock").forEach((b, i)=>{
+      if (i === 0) return;
+      b.remove();
+    });
+  }
+}
+
+function collectAreaContactos_(){
+  const wrap = $("ac_contacts");
+  const blocks = wrap ? Array.from(wrap.querySelectorAll(".contactBlock")) : [];
+  const contactos = [];
+
+  blocks.forEach((b)=>{
+    if (isEmptyContactBlock_(b)) return;
+    const nombre = getContactValue_(b, "nombre");
+    const apellido = getContactValue_(b, "apellido");
+    if (nombre.length < 2 || apellido.length < 2){
+      throw new Error("Contacto: nombre y apellido son obligatorios (mín 2).");
+    }
+    contactos.push({
+      nombre,
+      apellido,
+      cargo: getContactValue_(b, "cargo"),
+      rol: getContactValue_(b, "rol"),
+      mail: getContactValue_(b, "mail"),
+      telefono: getContactValue_(b, "telefono"),
+      dni: getContactValue_(b, "dni"),
+      observaciones: getContactValue_(b, "observaciones"),
+      red_discapacidad: getContactValue_(b, "red_discapacidad") || "No",
+      gcba: "SI",
+    });
+  });
+
+  if (!contactos.length){
+    throw new Error("Contacto obligatorio: Nombre y Apellido (mín 2).");
+  }
+  return contactos;
+}
+
+function addAreaContactoBlock_(){
+  const wrap = $("ac_contacts");
+  const tpl = document.getElementById("ac_contact_tpl");
+  if (!wrap || !tpl) return;
+
+  const frag = tpl.content.cloneNode(true);
+  const block = frag.querySelector(".contactBlock");
+  if (!block) return;
+
+  const rm = block.querySelector('[data-action="remove-contact"]');
+  if (rm){
+    rm.addEventListener("click", (e)=>{
+      e.preventDefault();
+      block.remove();
+    });
+  }
+
+  wrap.appendChild(block);
 }
 
 function collectAreaContactoPayload(){
   const area_nombre = String($("ac_area_nombre")?.value || "").trim();
   if (area_nombre.length < 3) throw new Error("Nombre de área es obligatorio (mín 3).");
 
-  const con_nombre = String($("ac_con_nombre")?.value || "").trim();
-  const con_apellido = String($("ac_con_apellido")?.value || "").trim();
-  if (con_nombre.length < 2 || con_apellido.length < 2){
-    throw new Error("Contacto obligatorio: Nombre y Apellido (mín 2).");
-  }
-
   const area = { area_nombre };
-
-  const contacto = {
-    nombre: con_nombre,
-    apellido: con_apellido,
-    cargo: String($("ac_con_cargo")?.value || "").trim(),
-    rol: String($("ac_con_rol")?.value || "").trim(),
-    mail: String($("ac_con_mail")?.value || "").trim(),
-    telefono: String($("ac_con_telefono")?.value || "").trim(),
-    dni: String($("ac_con_dni")?.value || "").trim(),
-    observaciones: String($("ac_con_observaciones")?.value || "").trim(),
-    red_discapacidad: String($("ac_con_red_discapacidad")?.value || "").trim() || "No",
-    gcba: "SI",
-  };
-
-  return { area, contacto };
+  const contactos = collectAreaContactos_();
+  return { area, contactos };
 }
 
 function saveAreaWithContacto(){
@@ -2553,14 +2734,15 @@ function saveAreaWithContacto(){
     .withSuccessHandler((res)=>{
       const ok = !!res?.ok;
       const areaId = res?.id_area || res?.area_id || "";
-      const perId  = res?.id_persona || res?.persona_id || "";
+      const perIds = Array.isArray(res?.persona_ids) ? res.persona_ids : (res?.id_persona ? [res.id_persona] : []);
+      const perLabel = perIds.length ? perIds.join(" | ") : "";
 
       if ($("ac_result_meta")) $("ac_result_meta").textContent = ok ? "OK" : "—";
       if ($("ac_result_box")){
         $("ac_result_box").innerHTML = ok
           ? `<div class="adminRow">
                <div class="id">${escapeHtml(areaId || "AR-—")}</div>
-               <div class="name">Área creada • contacto: <b>${escapeHtml(perId || "PE-—")}</b></div>
+               <div class="name">Área creada • contactos: <b>${escapeHtml(perLabel || "PE-—")}</b></div>
              </div>
              <div class="muted" style="margin-top:8px;">${escapeHtml(res?.message || "Guardado OK")}</div>`
           : `<div class="muted">Respuesta inesperada. ${escapeHtml(res?.message || "")}</div>`;
@@ -2592,6 +2774,15 @@ function bindAreaContactoModule(){
   if (bClear && !bClear.__bound){
     bClear.__bound = true;
     bClear.addEventListener("click", clearAreaContactoForm);
+  }
+
+  const bAdd = $("ac_add_contact");
+  if (bAdd && !bAdd.__bound){
+    bAdd.__bound = true;
+    bAdd.addEventListener("click", (e)=>{
+      e.preventDefault();
+      addAreaContactoBlock_();
+    });
   }
 
   // defaults
@@ -2717,6 +2908,7 @@ function loadEntidades(){
 
   // selector principal (tipo de entidad)
   const kind = String($("entKind")?.value || "entidad_privada").trim();
+  setEntFiltersVisibility(kind);
 
   // buscador general
   const q = String($("entQ")?.value || "").trim();
@@ -2748,34 +2940,164 @@ function loadEntidades(){
         return normText(v) === normText(fComuna);
       });
 
-      // ✅ headers “bonitos”
-      const prettyCols = columns.map(prettyEntHeader);
+        // ✅ headers “bonitos”
+        const prettyCols = columns.map(prettyEntHeader);
 
-      if (meta) meta.textContent = `${res.label || kind} • ${rows.length} registros`;
+        if (meta) meta.textContent = `${res.label || kind} • ${rows.length} registros`;
 
-      renderDynamicTable({
-        theadId: "entTheadRow",
-        tbodyId: "entBody",
-        // renderDynamicTable espera columnas reales para extraer datos,
-        // así que le pasamos las columnas reales, pero dibujamos headers bonitos adentro:
-        columns,
-        rows,
-        prettyColumns: prettyCols, // ✅ parámetro extra
-      });
+        ENT_ALL = rows;
+        ENT_FILTERED = rows;
+        ENT_KIND = res.kind || kind;
+        ENT_COLUMNS = columns;
 
-      // ✅ (opcional) reconstruir opciones de filtros según lo que haya cargado
-buildEntidadesFilterOptions(res.kind || kind, rows);
+        renderDynamicTable({
+          theadId: "entTheadRow",
+          tbodyId: "entBody",
+          // renderDynamicTable espera columnas reales para extraer datos,
+          // así que le pasamos las columnas reales, pero dibujamos headers bonitos adentro:
+          columns,
+          rows,
+          prettyColumns: prettyCols, // ✅ parámetro extra
+          withEdit: true,
+        });
+
+        bindEntEditButtons();
+
+        // ✅ (opcional) reconstruir opciones de filtros según lo que haya cargado
+  buildEntidadesFilterOptions(res.kind || kind, rows);
 
     })
     .withFailureHandler((err)=>{
       const msg = err?.message || err;
       if (meta) meta.textContent = "Error";
       if (box) box.innerHTML = `<tr><td class="empty">Error: ${escapeHtml(msg)}</td></tr>`;
-    })
-    .listEntidades({ kind });
+      })
+      .listEntidades({ kind });
+  }
+
+function entIsLocked_(kind, col){
+  const set = ENT_LOCKED_FIELDS[kind] || new Set();
+  return set.has(String(col || "").trim().toLowerCase());
 }
 
-function participantsToText_(jsonStr){
+function entBuildFieldHtml_(kind, col, value){
+  const id = `ent_edit_${col}`;
+  const label = prettyEntHeader(col);
+  const disabled = entIsLocked_(kind, col);
+  const v = String(value ?? "");
+
+  if (col === "observaciones"){
+    return `
+      <div>
+        <label>${escapeHtml(label)}</label>
+        <textarea id="${id}" class="input" ${disabled ? "disabled" : ""} data-ent-field="${escapeHtml(col)}">${escapeHtml(v)}</textarea>
+      </div>
+    `;
+  }
+
+  return `
+    <div>
+      <label>${escapeHtml(label)}</label>
+      <input id="${id}" class="input" value="${escapeHtml(v)}" ${disabled ? "disabled" : ""} data-ent-field="${escapeHtml(col)}" />
+    </div>
+  `;
+}
+
+function openEntEdit(row, kind, columns){
+  if (!row || !kind) return;
+  const back = $("entEditBack");
+  const form = $("entEditForm");
+  const title = $("entEditTitle");
+  const hint = $("entEditHint");
+
+  ENT_EDIT = {
+    open: true,
+    kind,
+    rowNumber: Number(row.__rowNumber || 0),
+    row,
+    columns: columns || []
+  };
+
+  if (title) title.textContent = `Editar ${kind === "area_gcba" ? "Área GCBA" : (kind === "persona" ? "Persona" : "Entidad")}`;
+  if (hint) hint.textContent = `Fila ${ENT_EDIT.rowNumber || "—"}`.trim();
+
+  if (form){
+    const cols = ENT_EDIT.columns || [];
+    const html = cols.map(c => entBuildFieldHtml_(kind, c, row[c])).join("");
+    form.innerHTML = `<div class="grid2">${html}</div>`;
+  }
+
+  if (back) back.style.display = "flex";
+}
+
+function closeEntEdit(){
+  ENT_EDIT.open = false;
+  const back = $("entEditBack");
+  if (back) back.style.display = "none";
+}
+
+function bindEntEditButtons(){
+  const tb = $("entBody");
+  if (!tb) return;
+  tb.querySelectorAll("button[data-ent-edit]").forEach(btn => {
+    if (btn.__bound) return;
+    btn.__bound = true;
+    btn.addEventListener("click", ()=>{
+      const rn = Number(btn.getAttribute("data-ent-edit") || 0);
+      const row = ENT_ALL.find(r => Number(r.__rowNumber) === rn);
+      if (row) openEntEdit(row, ENT_KIND, ENT_COLUMNS);
+    });
+  });
+}
+
+function saveEntEdit(){
+  if (!ENT_EDIT.open) return;
+  const form = $("entEditForm");
+  if (!form) return;
+
+  const updates = {};
+  form.querySelectorAll("[data-ent-field]").forEach(el => {
+    const key = el.getAttribute("data-ent-field");
+    if (!key) return;
+    if (el.disabled) return;
+    updates[key] = String(el.value || "");
+  });
+
+  if (!ENT_EDIT.rowNumber){
+    alert("No se pudo identificar la fila.");
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler((_res)=>{
+      closeEntEdit();
+      loadEntidades();
+    })
+    .withFailureHandler((err)=>{
+      alert(err?.message || err);
+    })
+    .updateEntidad({ kind: ENT_EDIT.kind, rowNumber: ENT_EDIT.rowNumber, updates });
+  }
+
+  function buildPersonaMap_(){
+    for (const k in PERSONA_BY_ID) delete PERSONA_BY_ID[k];
+    (CATALOGS?.personas || []).forEach(p => {
+      const id = String(p?.id || "").trim();
+      const name = String(p?.name || "").trim();
+      if (id) PERSONA_BY_ID[id] = name || id;
+    });
+  }
+
+  function mapPersonasFromContacto_(s){
+    const raw = String(s || "").trim();
+    if (!raw) return "";
+    const ids = raw.split("|").map(x => String(x || "").trim()).filter(Boolean);
+    if (!ids.length) return "";
+    const names = ids.map(id => PERSONA_BY_ID[id] || id);
+    return names.join(" | ");
+  }
+
+  function participantsToText_(jsonStr){
   const items = parseJsonArray(jsonStr).map(normalizeParticipant).filter(x => x.name || x.id);
   if (!items.length) return "";
   // "Nombre (Estado) | Nombre2 (Estado2)"
@@ -3074,7 +3396,7 @@ function rowMatchesAny(row, q, columns){
   return normText(hay).includes(needle);
 }
 
-function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns }){
+function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns, withEdit=false }){
   const thead = $(theadId);
   const tbody = $(tbodyId);
 
@@ -3083,17 +3405,29 @@ function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns }){
     ? prettyColumns
     : cols;
 
-  if (thead) thead.innerHTML = pretty.map(c => `<th>${escapeHtml(c)}</th>`).join("");
+  if (thead) thead.innerHTML = (withEdit ? `<th>Editar</th>` : "") + pretty.map(c => `<th>${escapeHtml(c)}</th>`).join("");
 
   if (!rows || !rows.length){
-    if (tbody) tbody.innerHTML = `<tr><td class="empty" colspan="${cols.length || 1}">Sin resultados.</td></tr>`;
+    const colspan = (cols.length || 1) + (withEdit ? 1 : 0);
+    if (tbody) tbody.innerHTML = `<tr><td class="empty" colspan="${colspan}">Sin resultados.</td></tr>`;
     return;
   }
 
   if (tbody){
     tbody.innerHTML = rows.map(r => {
-      const tds = cols.map(c => `<td>${escapeHtml(r[c] ?? "")}</td>`).join("");
-      return `<tr>${tds}</tr>`;
+      const editTd = withEdit
+        ? `<td><button class="btn" data-ent-edit="${escapeHtml(r.__rowNumber || "")}">Editar</button></td>`
+        : "";
+      const tds = cols.map(c => {
+        const v = r[c] ?? "";
+        if (c === "contacto"){
+          const label = mapPersonasFromContacto_(v);
+          return `<td><span class="cellWrap" title="${escapeHtml(label || v)}">${escapeHtml(label || v)}</span></td>`;
+        }
+        const txt = String(v ?? "");
+        return `<td><span class="cellWrap" title="${escapeHtml(txt)}">${escapeHtml(txt)}</span></td>`;
+      }).join("");
+      return `<tr>${editTd}${tds}</tr>`;
     }).join("");
   }
 }
@@ -3111,10 +3445,11 @@ function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns }){
         if (!res || !res.ok) throw new Error("Bootstrap inválido");
 
         DISPLAY_COLUMNS = res.displayColumns || [];
-        CATALOGS = res.catalogs || { areas: [], entes: [], personas: [] };
-        VALIDATIONS = res.validations || {};
-        PARTICIPANT_STATES = res.participantStates || ["A invitar","Invitado","Confirmado","Participó","No participó","Cancelado"];
-        LABELS = res.labels || {};
+          CATALOGS = res.catalogs || { areas: [], entes: [], personas: [] };
+          VALIDATIONS = res.validations || {};
+          PARTICIPANT_STATES = res.participantStates || ["A invitar","Invitado","Confirmado","Participó","No participó","Cancelado"];
+          LABELS = res.labels || {};
+          buildPersonaMap_();
 
         ESTADOS = getValList(["estadoAccion","estado_accion","EstadoAccion","Estado Accion"], ["IDEA","DESARROLLO","REALIZADO","CANCELADO"]);
 
@@ -3126,6 +3461,17 @@ function renderDynamicTable({ theadId, tbodyId, columns, rows, prettyColumns }){
             o.value = v === "Todos" ? "" : v;
             o.textContent = v;
             sel.appendChild(o);
+          });
+        }
+
+        const calSel = $("cal_estado");
+        if (calSel){
+          calSel.innerHTML = "";
+          ["Todos", ...ESTADOS].forEach(v=>{
+            const o = document.createElement("option");
+            o.value = v === "Todos" ? "" : v;
+            o.textContent = v;
+            calSel.appendChild(o);
           });
         }
 renderHeader();
@@ -3168,6 +3514,11 @@ loadData();
 
         ALL = res.rows || [];
         META = res.meta || null;
+        if ($("buildInfo")){
+          const sheet = META?.sheet || "ACCIONES";
+          const total = Array.isArray(ALL) ? ALL.length : 0;
+          $("buildInfo").textContent = `Hoja: ${sheet} • Registros: ${total}`;
+        }
 ACCIONES_FILTER_STATE.year  ||= "";
 ACCIONES_FILTER_STATE.tipo  ||= "";
 ACCIONES_FILTER_STATE.eje   ||= "";
@@ -3232,6 +3583,8 @@ window.loadCalendario = function () {
   });
 
   document.getElementById("btnCalRefresh")?.addEventListener("click", refreshCalendario);
+  document.getElementById("cal_estado")?.addEventListener("change", refreshCalendario);
+  document.getElementById("cal_q")?.addEventListener("input", refreshCalendario);
 
   refreshCalendario();
 };
@@ -3275,7 +3628,16 @@ function paintCalendarioActions(){
   const mk = calMonthKey(y, m0);
 
   // Si todavía no cargó ALL, no explota
-const rows = Array.isArray(FILTERED) ? FILTERED : [];
+  const estadoSel = String(document.getElementById("cal_estado")?.value || "").trim();
+  const q = String(document.getElementById("cal_q")?.value || "").trim();
+
+  let rows = Array.isArray(ALL) ? ALL : [];
+  if (estadoSel){
+    rows = rows.filter(r => String(r?.estado_accion || "").toUpperCase() === estadoSel.toUpperCase());
+  }
+  if (q){
+    rows = rows.filter(r => rowMatchesQuery(r, q));
+  }
 
 
   // index por fecha YYYY-MM-DD
@@ -3343,8 +3705,6 @@ function refreshCalendario() {
 
   const monthLbl = document.getElementById("calMonthLabel");
   const rangeLbl = document.getElementById("calRangeLabel");
-  const title = document.getElementById("calTitle");
-  const desc = document.getElementById("calDesc");
 
   if (!grid) {
     console.warn("Calendario: NO encontré contenedor para días. Probé: calGridDays/calGrid/calDays/[data-cal-days]/.calGridDays/.calGrid");
@@ -3358,17 +3718,16 @@ function refreshCalendario() {
 
   if (monthLbl) monthLbl.textContent = monthName;
   if (rangeLbl) rangeLbl.textContent = `${year}-${String(month + 1).padStart(2, "0")}`;
-  if (title) title.textContent = "Calendario";
-  if (desc) desc.textContent = `Mostrando acciones del mes ${monthName}.`;
 
   // Semana Dom..Sáb
   const firstDay = new Date(year, month, 1);
   const startDow = firstDay.getDay(); // 0=Dom
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Render 42 celdas (7x6)
+  // Render dinámico: solo días del mes + alineación mínima
   let html = "";
 
+  // leading blanks para alinear el día 1
   for (let i = 0; i < startDow; i++) {
     html += `<div class="calCell empty"><div class="calDay muted"> </div></div>`;
   }
@@ -3382,9 +3741,11 @@ function refreshCalendario() {
     `;
   }
 
+  // trailing blanks: solo para cerrar la última fila, pero limitado
   const rendered = startDow + daysInMonth;
-  const remaining = Math.max(0, 42 - rendered); // 6 semanas * 7 días
-  for (let i = 0; i < remaining; i++) {
+  let trailing = (7 - (rendered % 7)) % 7;
+  if (trailing > 2) trailing = 2; // máximo "un par" de extras
+  for (let i = 0; i < trailing; i++) {
     html += `<div class="calCell empty"><div class="calDay muted"> </div></div>`;
   }
 
@@ -3969,15 +4330,23 @@ if ($("btnClear") && !$("btnClear").__bound){
     $("estadoFiltro").addEventListener("change", applyFilters);
   }
 // ✅ Filtros nuevos Acciones (si existen en tu HTML)
-["tipoAccionFiltro","tipoFiltro","tipo_accionFiltro",
- "ejeFiltro","ejeGobFiltro","eje_gobiernoFiltro",
- "lineaTematicaFiltro","lineaFiltro","linea_tematicaFiltro","subejeFiltro",
- "anioFiltro","yearFiltro","accionesYear","acciones_anio"
-].forEach(id=>{
+["tipoAccionFiltro","ejeGobFiltro","lineaTematicaFiltro","anioFiltro"].forEach(id=>{
   const el = document.getElementById(id);
   if (el && !el.__bound){
     el.__bound = true;
-    el.addEventListener("change", applyFilters);
+    el.addEventListener("change", ()=>{
+      if (id === "tipoAccionFiltro") ACCIONES_FILTER_STATE.tipo = el.value || "";
+      if (id === "ejeGobFiltro") ACCIONES_FILTER_STATE.eje = el.value || "";
+      if (id === "lineaTematicaFiltro") ACCIONES_FILTER_STATE.linea = el.value || "";
+      if (id === "anioFiltro") {
+        ACCIONES_FILTER_STATE.year = el.value || "";
+        ACCIONES_FILTER_STATE.tipo = "";
+        ACCIONES_FILTER_STATE.eje = "";
+        ACCIONES_FILTER_STATE.linea = "";
+        buildAccionesFilterOptions_();
+      }
+      applyFilters();
+    });
   }
 });
 
@@ -3993,6 +4362,20 @@ if ($("btnClear") && !$("btnClear").__bound){
   if ($("btnSave") && !$("btnSave").__bound){
     $("btnSave").__bound = true;
     $("btnSave").addEventListener("click", saveEdit);
+  }
+
+  // Entidades modal
+  if ($("entBtnClose") && !$("entBtnClose").__bound){
+    $("entBtnClose").__bound = true;
+    $("entBtnClose").addEventListener("click", closeEntEdit);
+  }
+  if ($("entEditBack") && !$("entEditBack").__bound){
+    $("entEditBack").__bound = true;
+    $("entEditBack").addEventListener("click", (e)=>{ if (e.target === $("entEditBack")) closeEntEdit(); });
+  }
+  if ($("entBtnSave") && !$("entBtnSave").__bound){
+    $("entBtnSave").__bound = true;
+    $("entBtnSave").addEventListener("click", saveEntEdit);
   }
 
   // Sanitizar impacto (edit)
@@ -4043,6 +4426,24 @@ if ($("btnClear") && !$("btnClear").__bound){
   if (entQ && !entQ.__bound){
     entQ.__bound = true;
     entQ.addEventListener("input", loadEntidades);
+  }
+
+  const entClear = $("btnEntClear");
+  if (entClear && !entClear.__bound){
+    entClear.__bound = true;
+    entClear.addEventListener("click", ()=>{
+      if ($("entQ")) $("entQ").value = "";
+      if ($("entSector")) $("entSector").value = "";
+      if ($("entRubro")) $("entRubro").value = "";
+      if ($("entComuna")) $("entComuna").value = "";
+      loadEntidades();
+    });
+  }
+
+  const entRefresh = $("btnEntRefresh");
+  if (entRefresh && !entRefresh.__bound){
+    entRefresh.__bound = true;
+    entRefresh.addEventListener("click", loadEntidades);
   }
 
   ["entSector","entRubro","entComuna"].forEach(id=>{

@@ -73,6 +73,33 @@ const CFG_ADMIN = {
 
 const RS_BUILD = "RS | build 2026-01-13 AR";
 
+const ENTIDADES_MAP = {
+  entidad_privada: {
+    sheet: "ENTIDADES_PRIVADAS",
+    label: "Entidades Privadas",
+    columns: [
+      "id_ente","ente_nombre","sector","rubro","web","zona_cobertura","zona_comuna","direccion",
+      "red_discapacidad","observaciones","activo","updated_at","fecha_contacto","contacto"
+    ],
+    lock: new Set(["id_ente","updated_at","update_user"])
+  },
+  area_gcba: {
+    sheet: "AREAS_GCBA",
+    label: "Áreas GCBA",
+    columns: ["id_area","area_nombre","activo","contacto","fecha_contacto","updated_at","user"],
+    lock: new Set(["id_area","updated_at","update_user","user"])
+  },
+  persona: {
+    sheet: "PERSONAS",
+    label: "Personas",
+    columns: [
+      "id_persona","apellido","nombre","dni","mail","telefono","area","rol","activo","updated_at",
+      "area_id","cargo","observaciones","red_discapacidad","gcba","ente_nombre_ref"
+    ],
+    lock: new Set(["id_persona","updated_at","update_user"])
+  }
+};
+
 /* =========================================================
  * WEBAPP ENTRY
  * ========================================================= */
@@ -865,6 +892,26 @@ function nextId_(sheetName, idHeaderCandidates, prefix, pad) {
   return `${prefix}-${String(next).padStart(pad, "0")}`;
 }
 
+/** Genera N IDs consecutivos (usa nextId_ como base) */
+function nextIds_(sheetName, idHeaderCandidates, prefix, pad, count) {
+  const n = Math.max(1, Number(count || 1));
+  const first = nextId_(sheetName, idHeaderCandidates, prefix, pad);
+  if (n === 1) return [first];
+
+  const m = String(first).match(/^([A-Z]+)-(\d+)$/i);
+  if (!m) return [first];
+
+  const pref = m[1];
+  const start = Number(m[2]);
+  const width = m[2].length;
+
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(`${pref}-${String(start + i).padStart(width, "0")}`);
+  }
+  return out;
+}
+
 /**
  * CREATE Ente Privado — ENTIDADES_PRIVADAS
  */
@@ -1127,11 +1174,14 @@ function createEntidadPrivadaWithContacto(payload){
 
   let enteRow = null;
   let personaRow = null;
+  let personaRows = [];
 
   try {
     payload = payload || {};
     const entidad  = payload.entidad  || payload.ente || payload.entidad_privada || {};
-    const contacto = payload.contacto || payload.persona || {};
+    const contactos = Array.isArray(payload.contactos)
+      ? payload.contactos
+      : (payload.contacto ? [payload.contacto] : []);
 
     // =========================
     // 1) VALIDACIONES COMPLETAS
@@ -1142,13 +1192,16 @@ function createEntidadPrivadaWithContacto(payload){
     reqEnte.forEach(k => {
       if (!String(entidad[k] || "").trim()) throw new Error(`Entidad: falta "${k}".`);
     });
-    reqPersona.forEach(k => {
-      if (!String(contacto[k] || "").trim()) throw new Error(`Contacto: falta "${k}".`);
+    if (!contactos.length) throw new Error("Debe cargar al menos un contacto.");
+    contactos.forEach((c, i) => {
+      reqPersona.forEach(k => {
+        if (!String(c?.[k] || "").trim()) throw new Error(`Contacto ${i+1}: falta "${k}".`);
+      });
     });
 
     const enteNombre = String(entidad.ente_nombre || "").trim();
-    const dni  = String(contacto.dni || "").trim();
-    const mail = String(contacto.mail || "").trim();
+    const dnis  = contactos.map(c => String(c?.dni || "").trim()).filter(Boolean);
+    const mails = contactos.map(c => String(c?.mail || "").trim()).filter(Boolean);
 
     // =========================
     // 2) PRECHECKS (ANTES DE ESCRIBIR)
@@ -1156,17 +1209,18 @@ function createEntidadPrivadaWithContacto(payload){
     if (enteNombreExistsActive_(enteNombre)) {
       throw new Error("Ya existía una entidad con ese nombre (activa).");
     }
-    if (dni && personaDniExistsActive_(dni)) {
-      throw new Error("Ya existía una persona con ese DNI.");
-    }
-    if (mail && personaMailExistsActive_(mail)) {
-      throw new Error("Ya existía una persona con ese mail.");
-    }
+    dnis.forEach(dni => {
+      if (personaDniExistsActive_(dni)) throw new Error(`Ya existía una persona con el DNI ${dni}.`);
+    });
+    mails.forEach(mail => {
+      if (personaMailExistsActive_(mail)) throw new Error(`Ya existía una persona con el mail ${mail}.`);
+    });
 
     // =========================
     // 3) RESERVA ID PERSONA
     // =========================
-    const peId = nextId_(CFG_ADMIN.personasSheetName, ["id_persona","id","codigo"], "PE", 4);
+    const peIds = nextIds_(CFG_ADMIN.personasSheetName, ["id_persona","id","codigo"], "PE", 4, contactos.length);
+    const contactoStr = peIds.join(" | ");
 
     // =========================
     // 4) ESCRIBIR ENTE + PERSONA
@@ -1175,7 +1229,7 @@ function createEntidadPrivadaWithContacto(payload){
     // 4.1 ENTE con contacto PE-XXXX
     const enteRes = createEntePrivado({
       ...entidad,
-      contacto: peId,
+      contacto: contactoStr,
     });
 
     if (!enteRes?.ok || !enteRes?.created) {
@@ -1183,41 +1237,46 @@ function createEntidadPrivadaWithContacto(payload){
     }
     enteRow = enteRes.rowNumber || null;
 
-    // 4.2 PERSONA con el mismo PE-XXXX
+    // 4.2 PERSONAS (varios contactos)
     ensurePersonasHeadersForContacto_();
-    const personaRes = createPersona({
-      id_persona: peId,
-      nombre: String(contacto.nombre || "").trim(),
-      apellido: String(contacto.apellido || "").trim(),
-      dni,
-      mail,
-      telefono: String(contacto.telefono || "").trim(),
-      rol: String(contacto.rol || "").trim(),
-      cargo: String(contacto.cargo || "").trim(),
-      observaciones: String(contacto.observaciones || "").trim(),
-      red_discapacidad: String(contacto.red_discapacidad || "").trim(),
-      gcba: String(contacto.gcba || "").trim().toUpperCase() === "SI" ? "SI" : "NO",
-      area_id: "",
-      ente_nombre_ref: enteNombre,
-    });
+    personaRows = [];
+    for (let i = 0; i < contactos.length; i++){
+      const c = contactos[i] || {};
+      const personaRes = createPersona({
+        id_persona: peIds[i],
+        nombre: String(c.nombre || "").trim(),
+        apellido: String(c.apellido || "").trim(),
+        dni: String(c.dni || "").trim(),
+        mail: String(c.mail || "").trim(),
+        telefono: String(c.telefono || "").trim(),
+        rol: String(c.rol || "").trim(),
+        cargo: String(c.cargo || "").trim(),
+        observaciones: String(c.observaciones || "").trim(),
+        red_discapacidad: String(c.red_discapacidad || "").trim(),
+        gcba: String(c.gcba || "").trim().toUpperCase() === "SI" ? "SI" : "NO",
+        area_id: "",
+        ente_nombre_ref: enteNombre,
+      });
 
-    if (!personaRes?.ok || !personaRes?.created) {
-      throw new Error(personaRes?.message || "No se pudo crear la persona contacto.");
+      if (!personaRes?.ok || !personaRes?.created) {
+        throw new Error(personaRes?.message || "No se pudo crear la persona contacto.");
+      }
+      personaRows.push(personaRes.rowNumber || null);
     }
-    personaRow = personaRes.rowNumber || null;
+    personaRow = personaRows.filter(Boolean).slice(-1)[0] || null;
 
     return {
       ok: true,
       id_ente: enteRes.id,
-      id_persona: peId,
-      message: "Entidad privada + contacto creados.",
+      persona_ids: peIds,
+      message: "Entidad privada + contactos creados.",
     };
 
   } catch (err) {
     // =========================
     // 5) ROLLBACK
     // =========================
-    try { if (personaRow) rollbackRow_(CFG_ADMIN.personasSheetName, personaRow); } catch(_){}
+    try { personaRows.forEach(rn => rollbackRow_(CFG_ADMIN.personasSheetName, rn)); } catch(_){}
     try { if (enteRow) rollbackRow_(CFG_ADMIN.entesSheetName, enteRow); } catch(_){}
     throw err;
 
@@ -1236,11 +1295,14 @@ function createAreaWithContacto(payload){
 
   let areaRow = null;
   let personaRow = null;
+  let personaRows = [];
 
   try {
     payload = payload || {};
     const area = payload.area || payload.entidad || payload.area_gcba || {};
-    const contacto = payload.contacto || payload.persona || {};
+    const contactos = Array.isArray(payload.contactos)
+      ? payload.contactos
+      : (payload.contacto ? [payload.contacto] : []);
 
     // =========================
     // 1) VALIDACIONES
@@ -1248,24 +1310,31 @@ function createAreaWithContacto(payload){
     const area_nombre = String(area.area_nombre || "").trim();
     if (!area_nombre) throw new Error('Área: falta "area_nombre".');
 
-    const nombre = String(contacto.nombre || "").trim();
-    const apellido = String(contacto.apellido || "").trim();
-    if (!nombre || !apellido) throw new Error("Contacto: nombre y apellido son obligatorios.");
+    if (!contactos.length) throw new Error("Debe cargar al menos un contacto.");
+    contactos.forEach((c, i) => {
+      const nombre = String(c?.nombre || "").trim();
+      const apellido = String(c?.apellido || "").trim();
+      if (!nombre || !apellido) throw new Error(`Contacto ${i+1}: nombre y apellido son obligatorios.`);
+    });
 
-    const dni  = String(contacto.dni || "").trim();
-    const mail = String(contacto.mail || "").trim();
+    const dnis  = contactos.map(c => String(c?.dni || "").trim()).filter(Boolean);
+    const mails = contactos.map(c => String(c?.mail || "").trim()).filter(Boolean);
 
     // =========================
     // 2) PRECHECKS (ANTES DE ESCRIBIR)
     // =========================
     if (areaNombreExistsActive_(area_nombre)) throw new Error("Ya existía un área con ese nombre (activa).");
-    if (dni && personaDniExistsActive_(dni)) throw new Error("Ya existía una persona con ese DNI.");
-    if (mail && personaMailExistsActive_(mail)) throw new Error("Ya existía una persona con ese mail.");
+    dnis.forEach(dni => {
+      if (personaDniExistsActive_(dni)) throw new Error(`Ya existía una persona con el DNI ${dni}.`);
+    });
+    mails.forEach(mail => {
+      if (personaMailExistsActive_(mail)) throw new Error(`Ya existía una persona con el mail ${mail}.`);
+    });
 
     // =========================
     // 3) RESERVA ID PERSONA
     // =========================
-    const peId = nextId_(CFG_ADMIN.personasSheetName, ["id_persona","id","codigo"], "PE", 4);
+    const peIds = nextIds_(CFG_ADMIN.personasSheetName, ["id_persona","id","codigo"], "PE", 4, contactos.length);
 
     // =========================
     // 4) CREAR ÁREA (solo nombre)
@@ -1279,34 +1348,50 @@ function createAreaWithContacto(payload){
     // =========================
     ensurePersonasHeadersForContacto_();
 
-    const personaRes = createPersona({
-      id_persona: peId,
-      nombre,
-      apellido,
-      dni,
-      mail,
-      telefono: String(contacto.telefono || "").trim(),
-      rol: String(contacto.rol || "").trim(),
-      cargo: String(contacto.cargo || "").trim(),
-      observaciones: String(contacto.observaciones || "").trim(),
-      red_discapacidad: String(contacto.red_discapacidad || "").trim(),
-      gcba: "SI",
-      area_id: areaRes.id,
-      ente_nombre_ref: "",
-    });
+    personaRows = [];
+    for (let i = 0; i < contactos.length; i++){
+      const c = contactos[i] || {};
+      const personaRes = createPersona({
+        id_persona: peIds[i],
+        nombre: String(c.nombre || "").trim(),
+        apellido: String(c.apellido || "").trim(),
+        dni: String(c.dni || "").trim(),
+        mail: String(c.mail || "").trim(),
+        telefono: String(c.telefono || "").trim(),
+        rol: String(c.rol || "").trim(),
+        cargo: String(c.cargo || "").trim(),
+        observaciones: String(c.observaciones || "").trim(),
+        red_discapacidad: String(c.red_discapacidad || "").trim(),
+        gcba: "SI",
+        area_id: areaRes.id,
+        ente_nombre_ref: "",
+      });
 
-    if (!personaRes?.ok || !personaRes?.created) throw new Error(personaRes?.message || "No se pudo crear la persona contacto del área.");
-    personaRow = personaRes.rowNumber || null;
+      if (!personaRes?.ok || !personaRes?.created) throw new Error(personaRes?.message || "No se pudo crear la persona contacto del área.");
+      personaRows.push(personaRes.rowNumber || null);
+    }
+    personaRow = personaRows.filter(Boolean).slice(-1)[0] || null;
+
+    // set contactos en área si existe columna
+    try {
+      const sh = SpreadsheetApp.getActive().getSheetByName(CFG_ADMIN.areasSheetName);
+      const lastCol = sh.getLastColumn();
+      const hdr = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(h => normalizeHeader_(h));
+      const idx = {};
+      hdr.forEach((h, i)=>{ if (h) idx[h] = i + 1; });
+      if (idx["contacto"]) sh.getRange(areaRow, idx["contacto"]).setValue(peIds.join(" | "));
+      if (idx["fecha_contacto"]) sh.getRange(areaRow, idx["fecha_contacto"]).setValue(new Date());
+    } catch(_){}
 
     return {
       ok: true,
       id_area: areaRes.id,
-      id_persona: personaRes.id,
-      message: "Área + contacto creados.",
+      persona_ids: peIds,
+      message: "Área + contactos creados.",
     };
 
   } catch (err) {
-    try { if (personaRow) rollbackRow_(CFG_ADMIN.personasSheetName, personaRow); } catch(_){}
+    try { personaRows.forEach(rn => rollbackRow_(CFG_ADMIN.personasSheetName, rn)); } catch(_){}
     try { if (areaRow) rollbackRow_(CFG_ADMIN.areasSheetName, areaRow); } catch(_){}
     throw err;
 
@@ -1961,31 +2046,7 @@ function personaMailExistsActive_(mail){
 function listEntidades(payload){
   const kind = String(payload?.kind || "entidad_privada").trim();
 
-  const MAP = {
-    entidad_privada: {
-      sheet: "ENTIDADES_PRIVADAS",
-      label: "Entidades Privadas",
-      columns: [
-        "ente_nombre","sector","rubro","web","zona_cobertura","zona_comuna","direccion",
-        "red_discapacidad","observaciones","activo","updated_at","fecha_contacto","contacto"
-      ]
-    },
-    area_gcba: {
-      sheet: "AREAS_GCBA",
-      label: "Áreas GCBA",
-      columns: ["id_area","area_nombre","activo","contacto","fecha_contacto","updated_at","user"]
-    },
-    persona: {
-      sheet: "PERSONAS",
-      label: "Personas",
-      columns: [
-        "id_persona","apellido","nombre","dni","mail","telefono","area","rol","activo","updated_at",
-        "area_id","cargo","observaciones","red_discapacidad","gcba"
-      ]
-    }
-  };
-
-  const cfg = MAP[kind];
+  const cfg = ENTIDADES_MAP[kind];
   if (!cfg) return { ok:false, message:"kind inválido" };
 
   const ss = SpreadsheetApp.getActive();
@@ -2041,6 +2102,62 @@ function listEntidades(payload){
     rows,
     meta: { count: rows.length, sheet: cfg.sheet }
   };
+}
+
+/**
+ * Actualiza una entidad / área / persona por rowNumber.
+ * payload: { kind, rowNumber, updates }
+ */
+function updateEntidad(payload){
+  payload = payload || {};
+  const kind = String(payload.kind || "").trim();
+  const rowNumber = Number(payload.rowNumber);
+  const updates = payload.updates || {};
+
+  if (!kind || !ENTIDADES_MAP[kind]) throw new Error("kind inválido");
+  if (!rowNumber || rowNumber < 2) throw new Error("rowNumber inválido");
+
+  const cfg = ENTIDADES_MAP[kind];
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(cfg.sheet);
+  if (!sh) throw new Error(`No existe la hoja ${cfg.sheet}`);
+
+  const lastCol = sh.getLastColumn();
+  if (lastCol < 1) throw new Error("Hoja inválida");
+
+  const headersRaw = sh.getRange(1,1,1,lastCol).getValues()[0];
+  const headersNorm = headersRaw.map(h => normalizeHeader_(h));
+  const idx = {};
+  headersNorm.forEach((h,i)=>{ if (h) idx[h] = i + 1; });
+
+  const allowed = new Set((cfg.columns || []).map(c => normalizeHeader_(c)));
+  const locked = cfg.lock || new Set();
+
+  let wrote = 0;
+  for (const key in updates){
+    const k = normalizeHeader_(key);
+    if (locked.has(k)) continue;
+    if (!allowed.has(k)) continue;
+
+    const colNum = idx[k];
+    if (!colNum) continue;
+
+    let v = updates[key];
+    if (v === null || v === undefined) v = "";
+    v = String(v).trim();
+
+    sh.getRange(rowNumber, colNum).setValue(v);
+    wrote++;
+  }
+
+  const now = new Date();
+  const user = safeUserEmail_();
+
+  if (idx["updated_at"]) sh.getRange(rowNumber, idx["updated_at"]).setValue(now);
+  if (idx["update_user"]) sh.getRange(rowNumber, idx["update_user"]).setValue(user);
+  if (idx["user"]) sh.getRange(rowNumber, idx["user"]).setValue(user);
+
+  return { ok:true, wrote, rowNumber, sheet: cfg.sheet };
 }
 function getMedicionesSummary(filters){
   filters = filters || {};
