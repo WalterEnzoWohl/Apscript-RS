@@ -1530,6 +1530,8 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
   }
 
   function exportFichaAsHtml_(data, row){
+    const getVal = (v) => String(v ?? "").trim();
+    const getSel = (combo) => getVal(combo?.getSelection().value || "");
     const esc = (s) => String(s || "")
       .replaceAll("&","&amp;")
       .replaceAll("<","&lt;")
@@ -1537,19 +1539,48 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
 
+    const byId = (arr) => {
+      const m = {};
+      (arr || []).forEach(x => { if (x?.id) m[String(x.id)] = String(x.name || ""); });
+      return m;
+    };
+    const areasMap = byId(CATALOGS?.areas);
+    const entesMap = byId(CATALOGS?.entes);
+    const areaName = (id, nameFallback) => {
+      const key = String(id || "").trim();
+      return nameFallback || areasMap[key] || key || "(ninguno)";
+    };
+    const enteName = (id, nameFallback) => {
+      const key = String(id || "").trim();
+      return nameFallback || entesMap[key] || key || "(ninguno)";
+    };
+
     const meta = {
-      id: esc(row?.id_accion || ""),
       nombre: esc(row?.nombre_accion || ""),
     };
 
-    const rowsHtml = data.map(([k,v]) => {
-      return `
-        <div class="kv">
-          <div class="k">${esc(k)}</div>
-          <div class="v">${esc(v)}</div>
-        </div>
-      `;
-    }).join("");
+    const ficha = {
+      estado: esc(getSel(COMBOS.estado_accion) || row?.estado_accion || ""),
+      tipo: esc(getSel(COMBOS.tipo_accion) || row?.tipo_accion || ""),
+      fecha: esc($("f_fecha_accion_iso")?.value || row?.fecha_accion || ""),
+      produccion: esc(getSel(COMBOS.prod_tipo) || row?.produccion || ""),
+      linea: esc(getSel(COMBOS.lineaTematica) || row?.lineaTematica || row?.subeje || ""),
+      eje: esc(getSel(COMBOS.eje) || row?.eje || ""),
+      lugar: esc(getSel(COMBOS.lugar) || row?.lugar || ""),
+      territorio: esc(getSel(COMBOS.territorio) || row?.territorio || ""),
+      contratacion: esc(getSel(COMBOS.contratacion) || row?.contratacion_personal || ""),
+      metaTipo: esc(getSel(COMBOS.meta_tipo) || row?.meta_tipo || ""),
+      impacto: esc($("f_impacto_numerico")?.value || row?.impacto_numerico || ""),
+      comentarios: esc($("f_comentarios")?.value || row?.comentarios || ""),
+      ente1: esc(enteName(getSel(COMBOS.ente1) || row?.ente_org_1_id, row?.ente_org_1_id_name)),
+      ente2: esc(enteName(getSel(COMBOS.ente2) || row?.ente_org_2_id, row?.ente_org_2_id_name)),
+      ente3: esc(enteName(getSel(COMBOS.ente3) || row?.ente_org_3_id, row?.ente_org_3_id_name)),
+      area1: esc(areaName(getSel(COMBOS.area1) || row?.area_gcba_org_1_id, row?.area_gcba_org_1_id_name)),
+      area2: esc(areaName(getSel(COMBOS.area2) || row?.area_gcba_org_2_id, row?.area_gcba_org_2_id_name)),
+      area3: esc(areaName(getSel(COMBOS.area3) || row?.area_gcba_org_3_id, row?.area_gcba_org_3_id_name)),
+      partEnt: esc((entItems || []).map(p => p.name || p.id).join(" • ")),
+      partPer: esc((perItems || []).map(p => p.name || p.id).join(" • ")),
+    };
 
     const html = `
 <!DOCTYPE html>
@@ -1557,22 +1588,24 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ficha - ${meta.id || "Acción"}</title>
+  <title>Ficha de acción</title>
   <style>
     :root{
-      --gcba-blue:#153244;
-      --gcba-yellow:#FFCC00;
-      --gcba-cyan:#8DE2D6;
-      --gcba-gray:#3C3C3B;
-      --bg:#F7FAFB;
-      --line:#E3ECF0;
+      --rs-blue:#1F5FD6;
+      --rs-blue-dark:#1849A6;
+      --text:#17324B;
+      --muted:#6B7280;
+      --bg:#FFFFFF;
+      --line:#E5E7EB;
+      --card:#FFFFFF;
+      --soft:#F8FAFC;
     }
     *{ box-sizing:border-box; }
     body{
       margin:0;
       font-family: "Archivo", Arial, sans-serif;
       background: var(--bg);
-      color: var(--gcba-blue);
+      color: var(--text);
     }
     .page{
       max-width: 980px;
@@ -1580,83 +1613,108 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
       padding: 22px;
     }
     .card{
-      background:#fff;
+      background: var(--card);
       border:1px solid var(--line);
       border-radius: 18px;
-      box-shadow: 0 16px 30px rgba(21,50,68,.08);
       overflow:hidden;
     }
     .head{
       padding: 22px 26px;
       border-bottom:1px solid var(--line);
-      background: linear-gradient(180deg, #FFFFFF, #F8FCFC);
+      background: #FFFFFF;
       display:flex;
       justify-content:space-between;
       gap:16px;
       align-items:flex-start;
+    }
+    .logo{
+      width:58px; height:58px;
+      border-radius:18px;
+      background: var(--rs-blue);
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
     .brand{
       display:flex;
       flex-direction:column;
       gap:6px;
     }
-    .brand .kicker{
-      font-weight:900;
-      letter-spacing:.5px;
-      color: var(--gcba-gray);
-      font-size:12px;
-      text-transform: uppercase;
-    }
     .brand .title{
       font-weight:900;
-      font-size:26px;
-      color: var(--gcba-blue);
+      font-size:28px;
+      color: var(--text);
     }
     .brand .sub{
       font-weight:700;
-      font-size:13px;
-      color: rgba(60,60,59,.85);
+      font-size:14px;
+      color: var(--muted);
     }
-    .chip{
-      display:inline-flex;
+    .headLeft{
+      display:flex;
+      gap:14px;
       align-items:center;
-      gap:8px;
-      padding: 8px 12px;
-      border-radius:999px;
-      border:1px solid rgba(141,226,214,.75);
-      background: rgba(141,226,214,.22);
-      font-weight:900;
-      font-size:12px;
-      white-space:nowrap;
-      color: var(--gcba-blue);
     }
-    .content{
-      padding: 22px 26px 26px;
+    .stats{
       display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:14px 26px;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      padding: 16px 26px;
+      background: var(--soft);
+      border-bottom:1px solid var(--line);
     }
-    .kv{
+    .pill{
       border:1px solid var(--line);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 10px 12px;
+      background:#fff;
+      font-weight:800;
+      font-size:13px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background:#2F80ED;
+    }
+    .dot.green{ background:#27AE60; }
+    .dot.gray{ background:#B0B7C3; }
+    .sections{
+      padding: 18px 26px 26px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:16px;
+    }
+    .section{
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
       background:#fff;
     }
-    .k{
-      font-size:12px;
+    .section h3{
+      margin:0 0 10px 0;
+      font-size:16px;
       font-weight:900;
-      letter-spacing:.6px;
-      color: rgba(60,60,59,.85);
-      text-transform: uppercase;
-      margin-bottom:6px;
+      display:flex;
+      gap:10px;
+      align-items:center;
     }
-    .v{
-      font-size:14px;
-      font-weight:700;
-      color: var(--gcba-blue);
-      line-height:1.35;
-      white-space: pre-wrap;
+    .section h3 .sq{
+      width:16px; height:16px;
+      border-radius:4px;
+      background:#E8F0FE;
+      border:2px solid var(--rs-blue);
     }
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px 18px;
+    }
+    .kv .k{ font-size:12px; font-weight:900; color: var(--muted); text-transform: uppercase; }
+    .kv .v{ font-size:14px; font-weight:800; color: var(--text); white-space: pre-wrap; }
+    .kv{ display:flex; flex-direction:column; gap:6px; }
+    .wide{ grid-column: 1 / -1; }
     .footer{
       padding: 14px 26px 18px;
       border-top:1px solid var(--line);
@@ -1702,19 +1760,72 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
     </div>
     <div class="card">
       <div class="head">
-        <div class="brand">
-          <div class="kicker">GCBA Responsabilidad Social</div>
-          <div class="title">Ficha de acción</div>
-          <div class="sub">${meta.nombre}</div>
+        <div class="headLeft">
+          <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 64 64" aria-hidden="true">
+              <rect x="4" y="4" width="56" height="56" rx="14" fill="#1F5FD6"/>
+              <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#g)"/>
+              <defs>
+                <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#2B7BFF"/>
+                  <stop offset="100%" stop-color="#1B4FB8"/>
+                </linearGradient>
+              </defs>
+              <text x="32" y="40" text-anchor="middle" font-family="Arial" font-size="28" font-weight="900" fill="#FFFFFF">RS</text>
+            </svg>
+          </div>
+          <div class="brand">
+            <div class="title">${meta.nombre || "Acción"}</div>
+          </div>
         </div>
-        <div class="chip">${meta.id || "Sin ID"}</div>
       </div>
-      <div class="content">
-        ${rowsHtml}
+      <div class="stats">
+        <div class="pill"><span class="dot green"></span>Estado: ${ficha.estado || "—"}</div>
+        <div class="pill"><span class="dot"></span>Tipo: ${ficha.tipo || "—"}</div>
+        <div class="pill"><span class="dot gray"></span>Fecha: ${ficha.fecha || "—"}</div>
+        <div class="pill"><span class="dot gray"></span>${ficha.produccion || "—"}</div>
+      </div>
+      <div class="sections">
+        <div class="section">
+          <h3><span class="sq"></span>Identificación y clasificación</h3>
+          <div class="grid2">
+            <div class="kv"><div class="k">Línea temática</div><div class="v">${ficha.linea || "—"}</div></div>
+            <div class="kv"><div class="k">Eje de gobierno</div><div class="v">${ficha.eje || "—"}</div></div>
+            <div class="kv"><div class="k">Lugar</div><div class="v">${ficha.lugar || "—"}</div></div>
+            <div class="kv"><div class="k">Territorio</div><div class="v">${ficha.territorio || "—"}</div></div>
+            <div class="kv wide"><div class="k">Contratación de personal</div><div class="v">${ficha.contratacion || "—"}</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <h3><span class="sq"></span>Organizadores</h3>
+          <div class="grid2">
+            <div class="kv"><div class="k">Ente privado 1</div><div class="v">${ficha.ente1}</div></div>
+            <div class="kv"><div class="k">Área GCBA 1</div><div class="v">${ficha.area1}</div></div>
+            <div class="kv"><div class="k">Ente privado 2</div><div class="v">${ficha.ente2}</div></div>
+            <div class="kv"><div class="k">Área GCBA 2</div><div class="v">${ficha.area2}</div></div>
+            <div class="kv"><div class="k">Ente privado 3</div><div class="v">${ficha.ente3}</div></div>
+            <div class="kv"><div class="k">Área GCBA 3</div><div class="v">${ficha.area3}</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <h3><span class="sq"></span>Participación</h3>
+          <div class="grid2">
+            <div class="kv wide"><div class="k">Participantes (Entidad)</div><div class="v">${ficha.partEnt || "—"}</div></div>
+            <div class="kv wide"><div class="k">Participantes (Persona)</div><div class="v">${ficha.partPer || "—"}</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <h3><span class="sq"></span>Impacto</h3>
+          <div class="grid2">
+            <div class="kv"><div class="k">Tipo de indicador</div><div class="v">${ficha.metaTipo || "—"}</div></div>
+            <div class="kv"><div class="k">Impacto (numérico)</div><div class="v">${ficha.impacto || "—"}</div></div>
+            <div class="kv wide"><div class="k">Comentarios</div><div class="v">${ficha.comentarios || "—"}</div></div>
+          </div>
+        </div>
       </div>
       <div class="footer">
         <div>Generado: ${esc(new Date().toLocaleString("es-AR"))}</div>
-        <div>RS • Acciones</div>
+        <div>Responsabilidad Social</div>
       </div>
     </div>
   </div>
