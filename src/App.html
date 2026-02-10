@@ -1762,6 +1762,7 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
   <div class="page">
     <div class="actions">
       <button class="btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+      <button class="btn" onclick="downloadWord()">Word</button>
       <button class="btn primary" onclick="window.close()">Cerrar</button>
     </div>
     <div class="card">
@@ -1835,6 +1836,24 @@ if ($("f_fecha_accion_iso")) $("f_fecha_accion_iso").value = iso || "";
       </div>
     </div>
   </div>
+  <script>
+    function downloadWord(){
+      try{
+        var html = document.documentElement.outerHTML;
+        var blob = new Blob([html], { type: "application/msword" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "Ficha_de_accion.doc";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }catch(e){
+        alert("No se pudo generar Word.");
+      }
+    }
+  <\/script>
 </body>
 </html>
     `;
