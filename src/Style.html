@@ -186,6 +186,25 @@ body.modal-hide-header .topbar{
   justify-content:flex-end;
 }
 
+.menuToggle{
+  display:none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  padding: 0;
+  align-items:center;
+  justify-content:center;
+  gap: 4px;
+  flex-direction:column;
+}
+.menuToggleBar{
+  display:block;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--brand);
+}
+
 @media (max-width: 1280px){
   .controls{ gap: 8px; }
   .controls .btn.ghost{
@@ -470,6 +489,56 @@ tbody tr:hover{
   white-space: nowrap;
 }
 
+/* Tablero Acciones: columna "Nombre de la acción" más compacta y multilinea */
+.actionsTable thead th:nth-child(2),
+.actionsTable tbody td:nth-child(2){
+  width: 340px;
+  min-width: 340px;
+  max-width: 340px;
+}
+.actionsTable tbody td:nth-child(2) .cellWrap{
+  max-width: 320px;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.actionsTable tbody td .cellWrap{
+  max-width: 180px;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.actionsTable tbody td[data-col="nombre_accion"] .cellWrap{
+  max-width: 320px;
+}
+.actionsTable tbody td[data-col="comentarios"] .cellWrap{
+  max-width: 440px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+}
+.actionsTable thead th[data-col="comentarios"],
+.actionsTable tbody td[data-col="comentarios"]{
+  width: 440px;
+  min-width: 440px;
+  max-width: 440px;
+}
+.actionsTable thead th:nth-child(n+3),
+.actionsTable tbody td{
+  max-width: 240px;
+}
+
 .footerMeta{
   margin-top: 10px;
   display:flex;
@@ -571,10 +640,10 @@ tbody tr:hover{
   inset:0;
   background: rgba(21,50,68,.45);
   display:none;
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
-  padding: 18px;
-  z-index: 50;
+  padding: 90px 18px 18px;
+  z-index: 250;
 }
 
 .modal{
@@ -603,8 +672,33 @@ tbody tr:hover{
 
 .modalBody{
   padding: 14px;
-  max-height: 78vh;
+  max-height: calc(100vh - 170px);
   overflow:auto;
+}
+
+#calDayBack .modal{
+  width: min(760px, 100%);
+}
+
+#entEditBack .modal{
+  width: min(1280px, 100%);
+}
+
+.entContactEditor{
+  background: rgba(21,50,68,.03);
+}
+
+.entContactEditor .chips{
+  margin-top: 6px;
+  gap: 10px;
+}
+
+.entContactEditor .chipX{
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.entContactRow{
+  grid-template-columns: 1fr auto;
 }
 
 .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -619,6 +713,7 @@ tbody tr:hover{
 }
 
 .section{
+  position: relative;
   border:1px solid var(--line);
   border-radius: 18px;
   padding: 14px;
@@ -634,6 +729,52 @@ tbody tr:hover{
 .sectionDisabled{
   opacity: .55;
   filter: saturate(.85);
+}
+.sectionBlocker{
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(21,50,68,.06);
+  color: var(--brand);
+  font-weight: 800;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+  cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.multiDrop{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.multiDrop > summary{
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.multiDrop > summary::-webkit-details-marker{ display:none; }
+.multiDropList{
+  border-top: 1px solid var(--line);
+  padding: 10px 12px;
+  max-height: 210px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 8px 12px;
+}
+.multiDropOpt{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text);
 }
 
 /* =========================
@@ -1607,6 +1748,55 @@ label{
   min-height: 0;
 }
 
+.calDay{
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(21,50,68,.9);
+  line-height: 1;
+}
+
+.calPill{
+  appearance:none;
+  width:100%;
+  border-radius: 10px;
+  padding: 6px 7px;
+  border: 1px solid rgba(21,50,68,.12);
+  background: rgba(21,50,68,.05);
+  color: rgba(21,50,68,.92);
+  text-align:left;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor:pointer;
+  transition: border-color .12s ease, filter .12s ease;
+  white-space: normal;
+  word-break: break-word;
+}
+.calPill:hover{
+  border-color: rgba(141,226,214,.65);
+  filter: brightness(.985);
+}
+.calPill.state-IDEA{
+  background: rgba(245,158,11,.16);
+  border-color: rgba(245,158,11,.28);
+  color: #7C4A03;
+}
+.calPill.state-DESARROLLO{
+  background: rgba(141,226,214,.24);
+  border-color: rgba(141,226,214,.58);
+  color: var(--brand);
+}
+.calPill.state-REALIZADO{
+  background: rgba(22,163,74,.14);
+  border-color: rgba(22,163,74,.25);
+  color: #0F5B2D;
+}
+.calPill.state-CANCELADO{
+  background: rgba(239,68,68,.13);
+  border-color: rgba(239,68,68,.25);
+  color: #7F1D1D;
+}
+
 /* Evento (tarjetita como en tu 3ra imagen) */
 .calEv{
   border-radius: 14px;
@@ -1683,6 +1873,92 @@ label{
   border: 1px solid rgba(21,50,68,.14);
 }
 
+.calMobileDayBox{
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 10px;
+}
+.calMobileDayHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.calMobileDayTitle{
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--brand);
+}
+.calMobileDayList{
+  display:grid;
+  gap: 8px;
+  max-height: 58vh;
+  overflow:auto;
+}
+.calMobileItem{
+  appearance:none;
+  width:100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(21,50,68,.03);
+  padding: 10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 8px;
+  text-align:left;
+  cursor:pointer;
+}
+.calMobileItemMain{
+  min-width:0;
+}
+.calMobileItemTitle{
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(21,50,68,.92);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.calMobileItemMeta{
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(21,50,68,.7);
+}
+.calMobileItemState{
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(21,50,68,.14);
+}
+.calMobileItemState.state-IDEA{
+  background: rgba(245,158,11,.16);
+  border-color: rgba(245,158,11,.28);
+  color: #7C4A03;
+}
+.calMobileItemState.state-DESARROLLO{
+  background: rgba(141,226,214,.24);
+  border-color: rgba(141,226,214,.58);
+  color: var(--brand);
+}
+.calMobileItemState.state-REALIZADO{
+  background: rgba(22,163,74,.14);
+  border-color: rgba(22,163,74,.25);
+  color: #0F5B2D;
+}
+.calMobileItemState.state-CANCELADO{
+  background: rgba(239,68,68,.13);
+  border-color: rgba(239,68,68,.25);
+  color: #7F1D1D;
+}
+
 /* Responsive: el layout 2 columnas pasa a 1 */
 @media (max-width: 1100px){
   #calLayout{
@@ -1720,6 +1996,9 @@ label{
 #viewCalendario .adminMiniBody{
   max-height: none !important;
   overflow: visible !important;
+}
+#viewCalendario .adminMini{
+  overflow: visible;
 }
 /* Evitar scrollbar horizontal en calendario */
 #viewCalendario,
@@ -2063,4 +2342,374 @@ label{
   .listFilters{ grid-template-columns: 1fr; }
 }
 
+
+/* Layout especifico Tablero de acciones */
+.actionsFilters{
+  display:grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  grid-template-areas:
+    "search search search search search search search search search search search search"
+    "year year year year month month month month date date date date"
+    "state state state line line line type type type axis axis axis";
+  align-items:end;
+}
+.actionsFilters .af-search{ grid-area: search !important; }
+.actionsFilters .af-year{ grid-area: year !important; }
+.actionsFilters .af-month{ grid-area: month !important; }
+.actionsFilters .af-date{ grid-area: date !important; }
+.actionsFilters .af-state{ grid-area: state !important; }
+.actionsFilters .af-line{ grid-area: line !important; }
+.actionsFilters .af-type{ grid-area: type !important; }
+.actionsFilters .af-axis{ grid-area: axis !important; }
+
+@media (max-width: 1100px){
+  .actionsFilters{
+    grid-template-areas:
+      "search search search search search search search search search search search search"
+      "year year year year year year month month month month month month"
+      "date date date date date date state state state state state state"
+      "line line line line line line type type type type type type"
+      "axis axis axis axis axis axis axis axis axis axis axis axis";
+  }
+}
+@media (max-width: 720px){
+  .actionsFilters{
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "search"
+      "year"
+      "month"
+      "date"
+      "state"
+      "line"
+      "type"
+      "axis";
+  }
+}
+
+/* =========================================================
+   Responsive global (mobile-first hardening)
+   ========================================================= */
+@media (max-width: 980px){
+  .wrap{
+    padding: 0 10px 24px;
+  }
+
+  .topbar{
+    padding: 10px 12px;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .brand{
+    min-width: 0;
+    flex: 1;
+  }
+  .brandRow{
+    gap: 8px;
+    align-items: center;
+  }
+  .brandIcon{
+    width: 92px;
+    height: 40px;
+  }
+  .brandIcon svg{
+    width: 92px;
+    height: 40px;
+  }
+  .brand .title{
+    font-size: 18px;
+    line-height: 1.1;
+  }
+  .brand .sub{
+    font-size: 12px;
+  }
+
+  .menuToggle{
+    display: inline-flex;
+  }
+  .controls{
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  body.mobile-nav-open .controls{
+    display: flex;
+  }
+  .controls .btn{
+    width: 100%;
+    text-align: left;
+  }
+  .controls .btn.ghost{
+    padding: 11px 12px;
+    font-size: 14px;
+  }
+
+  .panel{
+    margin-top: 12px;
+    padding: 12px;
+  }
+  .adminShell{
+    padding: 12px;
+  }
+  .adminTitle{
+    font-size: 22px;
+  }
+
+  .listHeader{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .listHeaderActions{
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+    width: 100%;
+  }
+  .listHeaderActions .btn{
+    width: 100%;
+  }
+
+  .rowBtns{
+    justify-content: stretch;
+  }
+  .rowBtns .btn{
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .adminBtns{
+    width: 100%;
+    flex-wrap: wrap;
+    white-space: normal;
+    gap: 8px;
+  }
+  .adminBtns .btn{
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .entBar,
+  .medBar,
+  .adminTopControls{
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .entBarLeft,
+  .entBarRight,
+  .medBarLeft,
+  .medBarRight{
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .entField,
+  .medField,
+  .adminControl{
+    min-width: 0 !important;
+    width: 100%;
+  }
+  .entBarRight .btn,
+  .medBarRight .btn{
+    width: 100%;
+  }
+
+  .adminHeader{
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .adminHeaderRight{
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  #adm_module{
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  #admActions{
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  #admActions > div{
+    flex: 1 1 100%;
+    gap: 8px !important;
+  }
+  #admActions .btn,
+  #btnAdminBack{
+    width: 100%;
+  }
+
+  .adminMiniBody{
+    max-height: none;
+  }
+
+  .tableWrap{
+    border-radius: 12px;
+  }
+  .scrollX{
+    max-height: none;
+  }
+
+  .actionsTable thead th:nth-child(2),
+  .actionsTable tbody td:nth-child(2){
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+  }
+  .actionsTable tbody td:nth-child(2) .cellWrap{
+    max-width: 240px;
+    -webkit-line-clamp: 3;
+  }
+  .actionsTable tbody td .cellWrap{
+    max-width: 140px;
+    -webkit-line-clamp: 2;
+  }
+  .actionsTable tbody td[data-col="nombre_accion"] .cellWrap{
+    max-width: 240px;
+  }
+  .actionsTable tbody td[data-col="comentarios"] .cellWrap{
+    max-width: 300px;
+  }
+  .actionsTable thead th[data-col="comentarios"],
+  .actionsTable tbody td[data-col="comentarios"]{
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
+  }
+
+  .modalBack{
+    padding: 62px 8px 8px;
+  }
+  .modal{
+    width: 100%;
+    max-height: calc(100vh - 72px);
+  }
+  .modalHead{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .modalHead .rowBtns{
+    width: 100%;
+  }
+  .modalBody{
+    max-height: calc(100vh - 140px);
+    padding: 10px;
+  }
+
+  .entContactEditor .chipX{
+    grid-template-columns: 1fr;
+  }
+  .entContactRow{
+    grid-template-columns: 1fr;
+  }
+  .multiDropList{
+    grid-template-columns: 1fr;
+  }
+
+  #medKpis{
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 680px){
+  .listHeaderActions{
+    grid-template-columns: 1fr;
+  }
+  .rowBtns .btn,
+  .adminBtns .btn{
+    flex: 1 1 100%;
+  }
+  #medKpis{
+    grid-template-columns: 1fr !important;
+  }
+
+  #viewCalendario .adminMiniBody{
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+  #viewCalendario #calGridDOW,
+  #viewCalendario #calGridDays{
+    min-width: 0;
+    gap: 4px !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  }
+  #viewCalendario #calGridDOW > div{
+    font-size: 10px;
+    text-align: center;
+    padding: 0;
+  }
+  #viewCalendario .calCell{
+    min-height: 76px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+  #viewCalendario .calDay{
+    font-size: 11px;
+  }
+  #viewCalendario .calEvents{
+    gap: 3px;
+  }
+  #viewCalendario .calPill{
+    font-size: 9px;
+    padding: 3px 4px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #viewCalendario .calLegendChip{
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+  #viewCalendario .calMobileItem{
+    padding: 8px;
+  }
+}
+
+/* Mediciones - KPIs centrados y destaque Total */
+#viewMediciones #medKpis .adminMiniHead{
+  justify-content: center;
+  text-align: center;
+}
+#viewMediciones #medKpis .adminMiniHead .muted{
+  display: none;
+}
+#viewMediciones #medKpis .adminMiniBody{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+#viewMediciones #medKpis .adminMiniBody > div{
+  width: 100%;
+  text-align: center;
+}
+#viewMediciones #medKpis .medKpiTotalCard{
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: none;
+}
+#viewMediciones #medKpis .medKpiTotalCard .adminMiniHead{
+  background: var(--surface-2);
+}
+#viewMediciones #medKpis .medKpiTotalCard .adminMiniHead > div:first-child{
+  font-size: 22px;
+  line-height: 1;
+}
+#viewMediciones #medKpis .medKpiTotalValue{
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--brand);
+  line-height: 1;
+}
 </style>
+
+

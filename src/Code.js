@@ -79,7 +79,7 @@ const ENTIDADES_MAP = {
     label: "Entidades Privadas",
     columns: [
       "id_ente","ente_nombre","sector","rubro","web","zona_cobertura","zona_comuna","direccion",
-      "red_discapacidad","observaciones","activo","updated_at","fecha_contacto","contacto"
+      "red_discapacidad","lineas_tematicas_interes","observaciones","activo","updated_at","fecha_contacto","contacto"
     ],
     lock: new Set(["id_ente","updated_at","update_user"])
   },
@@ -926,6 +926,7 @@ function ensureEntidadesPrivadasHeaders_() {
     "zona_comuna",
     "direccion",
     "red_discapacidad",
+    "lineas_tematicas_interes",
     "observaciones",
     "activo",
     "updated_at",
@@ -962,8 +963,24 @@ function createEntePrivado(ente) {
   const web = String(e.web || "").trim();
   const direccion = String(e.direccion || "").trim();
   const red_discapacidad = String(e.red_discapacidad || "").trim();
+  const lineas_tematicas_interes = String(e.lineas_tematicas_interes || "").trim();
   const observaciones = String(e.observaciones || "").trim();
   const activo = String(e.activo || "SI").trim().toUpperCase() === "NO" ? "NO" : "SI";
+
+  const rdNorm = red_discapacidad
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+  const lineasCount = lineas_tematicas_interes
+    ? lineas_tematicas_interes.split("|").map(x => String(x || "").trim()).filter(Boolean).length
+    : 0;
+  if (rdNorm === "SI" && !lineas_tematicas_interes){
+    throw new Error("Si pertenece a la Red de discapacidad, debe informar líneas temáticas de interés.");
+  }
+  if (lineasCount > 3){
+    throw new Error("Líneas temáticas de interés: máximo 3 opciones.");
+  }
 
   // referencia a persona contacto (PE-XXXX)
   const contacto = String(e.contacto || "").trim();
@@ -1006,6 +1023,7 @@ function createEntePrivado(ente) {
 
   if (idx["direccion"] !== undefined) row[idx["direccion"]] = direccion;
   if (idx["red_discapacidad"] !== undefined) row[idx["red_discapacidad"]] = red_discapacidad;
+  if (idx["lineas_tematicas_interes"] !== undefined) row[idx["lineas_tematicas_interes"]] = lineas_tematicas_interes;
   if (idx["observaciones"] !== undefined) row[idx["observaciones"]] = observaciones;
   if (idx["activo"] !== undefined) row[idx["activo"]] = activo;
   if (idx["updated_at"] !== undefined) row[idx["updated_at"]] = now;
@@ -2280,9 +2298,12 @@ function exportAccionesXlsx(payload){
   const ymd = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
   const estado = String(meta.estado || "").trim();
   const q = String(meta.q || "").trim();
+  const kind = String(meta.kind || "").trim();
+  const base = String(meta.exportBase || "RS_TableroAcciones").trim() || "RS_TableroAcciones";
   const suffix = [estado ? "estado_" + estado : "", q ? "q_" + q.replace(/[^\w]+/g, "_").slice(0,30) : ""]
     .filter(Boolean).join("__");
-  const filename = `RS_TableroAcciones_${ymd}${suffix ? "__" + suffix : ""}.xlsx`;
+  const kindToken = kind ? "__kind_" + kind.replace(/[^\w]+/g, "_").slice(0,30) : "";
+  const filename = `${base}_${ymd}${kindToken}${suffix ? "__" + suffix : ""}.xlsx`;
 
   return {
     filename,

@@ -1,104 +1,103 @@
-# Contexto de la Aplicaci?n (RS ? Acciones)
+# Contexto Actualizado - RS Acciones (Apps Script)
 
 ## Objetivo
-Aplicaci?n web en Google Apps Script para registrar, administrar y visualizar **acciones** y **entidades** relacionadas. Incluye carga de acciones, tablero de entidades, mediciones, calendario y m?dulos de administraci?n de cat?logos, con edici?n in-app y contactos m?ltiples.
+WebApp de Google Apps Script para gestionar:
+- Acciones (alta, edición, tablero, exportación).
+- Entidades (privadas, áreas GCBA, personas contacto).
+- Calendario mensual de acciones.
+- Mediciones/KPIs.
 
-## Stack y estructura
-- **Apps Script (backend):** `src/Code.js`
-- **UI (HTML):** `src/Index.html`
-- **L?gica front-end (JS embebido):** `src/App.html`
-- **Estilos:** `src/Style.html`
-- **Configuraci?n Apps Script:** `src/appsscript.json`
+Incluye lógica de catálogos, validaciones, edición por modal y exportaciones.
 
-## Hojas de c?lculo usadas
-Las hojas se encuentran en el Spreadsheet activo asociado al Script. Estructura base (seg?n archivo RS_DATOS.xlsx):
+## Stack y archivos principales
+- Backend Apps Script: `src/Code.js`
+- Estructura UI: `src/Index.html`
+- Lógica frontend (JS): `src/App.html`
+- Estilos: `src/Style.html`
+- Manifest: `src/appsscript.json`
 
-- **ACCIONES**
-  - `timestamp`, `usuario`, `id_accion`, `fecha_carga`, `fecha_accion`, `estado_accion`, `nombre_accion`, `tipo_accion`, `eje`, `lineaTematica`, `produccion`,
-    `area_gcba_org_1_id`, `area_gcba_org_2_id`, `area_gcba_org_3_id`, `ente_org_1_id`, `ente_org_2_id`, `ente_org_3_id`, `lugar`, `territorio`,
-    `contratacion_personal`, `estado_invitado`, `participantes_entidad_json`, `participantes_persona_json`, `participantes_extras_json`, `meta_tipo`,
-    `impacto_numerico`, `comentarios`, `updated_at`, `update_user`, `activo`
-- **VALIDACIONES**: `campo`, `valor`, `activo`, `updated_at`, `User`
-- **AREAS_GCBA**: `id_area`, `area_nombre`, `activo`, `contacto`, `fecha_contacto`, `updated_at`, `User`
-- **ENTIDADES_PRIVADAS**: `id_ente`, `ente_nombre`, `sector`, `rubro`, `web`, `zona_cobertura`, `zona_comuna`, `direccion`, `red_discapacidad`, `observaciones`, `activo`, `updated_at`, `fecha_contacto`, `contacto`
-- **PERSONAS**: `id_persona`, `apellido`, `nombre`, `dni`, `mail`, `telefono`, `area`, `rol`, `activo`, `updated_at`, `area_id`, `cargo`, `observaciones`, `red_discapacidad`, `gcba`, `ente_nombre_ref`, `update_user`
+## Hojas de datos (fuente principal)
+- `ACCIONES`
+- `VALIDACIONES`
+- `AREAS_GCBA`
+- `ENTIDADES_PRIVADAS`
+- `PERSONAS`
+- (y hojas auxiliares usadas por funciones de bootstrap/admin en `Code.js`)
 
-## Flujo general de la app
-1. **doGet()** devuelve `Index.html` con parciales `Style.html` y `App.html`.
-2. **Bootstrap inicial** desde `getUIBootstrap()`:
-   - Columnas a mostrar
-   - Cat?logos (?reas, entes, personas)
-   - Validaciones
-   - Estados y etiquetas
-3. **Carga de datos** desde `listAcciones()`.
-4. **Render de tabla y filtros** en el front.
+## Flujo técnico general
+1. `doGet()` renderiza `Index` e incluye `Style` + `App`.
+2. `getUIBootstrap()` devuelve:
+   - columnas, labels, catálogos, validaciones, estados.
+3. `listAcciones()` carga datos para tablero, calendario y mediciones.
+4. Frontend mantiene estado global y renderiza vistas/tablas/modales.
 
-## Vistas principales
-- **Tablero Acciones**: listado con filtros + edici?n.
-- **Tablero Entidades**: listado din?mico de entidades/?reas/personas con filtros por Sector/Rubro/Comuna y edici?n.
-- **Carga Acciones**: alta de acciones.
-- **Carga Entidades (Admin)**: alta de entidades privadas y ?reas GCBA con uno o m?s contactos.
-- **Mediciones**: KPIs y tabla por l?nea tem?tica, exportaci?n CSV.
-- **Calendario**: vista mensual con acciones por fecha, filtro por estado y buscador.
+## Vistas y módulos
+- Tablero Acciones
+  - Filtros: búsqueda, año, mes, fecha, estado, tipo, eje, línea temática.
+  - Botón `Invertir orden` (más reciente/antiguo).
+  - Edición por modal.
+  - Exportación Excel.
+- Carga Acciones
+  - Campos por estado con lógica de habilitación/bloqueo.
+  - Participantes y combos dinámicos.
+- Carga Entidades
+  - Módulos: Entidades Privadas, Áreas GCBA, Personas Contacto.
+  - Alta/vinculación/desvinculación de contactos.
+  - Modal de edición en Tablero Entidades.
+- Tablero Entidades
+  - Filtros por tipo y atributos.
+  - Exportación Excel.
+- Mediciones
+  - KPIs (Total, Realizadas, En desarrollo, Idea, Canceladas).
+  - Tabla por línea temática.
+  - Exportación (xlsx si backend disponible, fallback csv).
+- Calendario
+  - Vista desktop completa.
+  - Versión mobile adaptada con interacción por día y acciones.
 
-## Backend (Code.js) ? funciones clave
-- **WebApp**: `doGet()`, `include()`
-- **Bootstrap UI**: `getUIBootstrap()`
-- **Acciones**:
-  - `listAcciones()`
-  - `getAccionByRow()`
-  - `getAccionByIdAccion()`
-  - `createAccion()`
-  - `updateAccion()`
-  - `listAccionesCalendar()`
-- **Admin**: alta y validaciones de entidades/?reas/personas
-  - **Entidades con m?ltiples contactos**: `createEntidadPrivadaWithContacto()` acepta `contactos[]`
-  - **?reas con m?ltiples contactos**: `createAreaWithContacto()` acepta `contactos[]`
-- **Cat?logos**: `readCatalog_()`, `readPersonasCatalog_()`
-- **Utilidades**: normalizaci?n de headers, fechas, JSON, IDs, etc.
+## Cambios recientes importantes (estado actual)
+- Tablero Acciones:
+  - `fecha_carga` oculta en UI.
+  - `fecha_carga` se mantiene en exportación Excel.
+  - Columna `nombre_accion` compactada y multilinea controlada.
+  - Resto de columnas compactadas.
+  - Columna `comentarios` ensanchada para mejor lectura (sin truncado agresivo).
+- Exportaciones:
+  - CSV con BOM UTF-8 (`\uFEFF`) para evitar corrupción de tildes/ñ en Excel.
+  - Aplica a descarga CSV genérica y fallback de mediciones.
+- Responsive:
+  - Navegación mobile con menú hamburguesa.
+  - Ajustes de layouts, filtros, tablas y calendario para celular.
+- Entidades:
+  - Modal de edición funcional.
+  - Gestión visual de contactos vinculados y creación/vinculación desde modal.
 
-## Front-end (App.html) ? funciones clave
-- **Estado global**: `ALL`, `FILTERED`, `DISPLAY_COLUMNS`, `VALIDATIONS`, `CATALOGS`.
-- **Filtros del tablero**:
-  - Estado, A?o, L?nea tem?tica, Eje, Tipo de acci?n.
-  - Las opciones de L?nea/Eje/Tipo se recalculan seg?n el A?o seleccionado.
-- **Tabla**: renderiza filas y permite abrir modal de edici?n.
-- **Carga**: formulario completo con participantes, combos y estados.
-- **Admin**: combos y flujos espec?ficos por tipo + carga de contactos m?ltiples.
-- **Mediciones**: KPIs + tabla por l?nea, exportaci?n CSV.
-- **Calendario**: grilla mensual con acciones, filtro por estado y b?squeda.
+## Convenciones de implementación
+- Fechas: ISO `YYYY-MM-DD` para persistencia.
+- IDs normalizados por utilidades backend.
+- Headers con normalización robusta en backend para tolerar variantes.
+- Campos bloqueados en acciones: `fecha_carga`, `nombre_accion`, `timestamp`, `usuario`, `id_accion`.
 
-## C?mo se utiliza (usuario final)
-1. Abrir la webapp publicada.
-2. Navegar por pesta?as:
-   - **Tablero Acciones**: buscar, filtrar, editar.
-   - **Carga Acciones**: registrar nuevas acciones.
-   - **Carga Entidades**: registrar entidades, ?reas y personas (con m?ltiples contactos).
-   - **Mediciones**: ver KPIs y exportar.
-   - **Calendario**: vista de acciones por fecha.
+## Estado frontend relevante (App.html)
+- Variables principales:
+  - `ALL`, `FILTERED`, `META`
+  - `DISPLAY_COLUMNS` (UI)
+  - `EXPORT_COLUMNS` (export; puede incluir columnas ocultas en UI)
+  - `VALIDATIONS`, `CATALOGS`, `ESTADOS`
+- Render principal:
+  - `renderHeader()`, `renderTable()`, `applyFilters()`
+- Export:
+  - `buildExportMatrixFromFiltered_()`
+  - `exportFilteredAccionesXLSX()`
+  - `exportFilteredEntidadesXLSX()`
+  - `medExport_()` / `medExportCSV_()`
 
-## Convenciones importantes
-- **IDs**: `id_accion` se genera autom?ticamente en `createAccion()`.
-- **IDs ?reas**: formato de 4 d?gitos (`AR-0001`), coherente con Acciones.
-- **Contactos**: columnas `contacto` en ENTIDADES/?REAS guardan IDs de persona separados por ` | `.
-- **Fechas**: formato ISO `YYYY-MM-DD`.
-- **Headers**: normalizaci?n robusta (case-insensitive, sin acentos, sin espacios).
-- **Columnas bloqueadas**: `fecha_carga`, `nombre_accion`, `timestamp`, `usuario`, `id_accion`.
+## Deploy y sincronización
+- Descargar cambios remotos: `clasp pull`
+- Subir cambios locales: `clasp push`
+- Deploy WebApp: `clasp deploy`
 
-## Notas de mantenimiento
-- Si se agregan columnas nuevas en `ACCIONES`, revisar:
-  - `CFG_MAIN.DISPLAY_COLUMNS`
-  - Render de tabla en `App.html`
-- Si se agregan nuevas validaciones, revisar `VALIDACIONES`.
-- Si se modifica encoding, revisar caracteres especiales (acentos).
-- Tablero Entidades:
-  - El campo `contacto` se muestra como nombres (mapeo desde cat?logo de personas).
-  - La edici?n de entidades/?reas/personas est? habilitada desde el tablero.
-
-## Deploy y sincronizaci?n
-- **pull**: `clasp pull`
-- **push**: `clasp push`
-- **publish**: `clasp deploy`
-
----
-Este documento est? pensado como gu?a base para futuros asistentes y desarrolladores.
+## Nota operativa
+Si cambios no aparecen en la web:
+1. Hard refresh del navegador (`Ctrl+F5`).
+2. Crear nueva versión en Implementaciones de Apps Script si estás usando deployment versionado.

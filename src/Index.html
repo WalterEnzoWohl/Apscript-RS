@@ -20,7 +20,13 @@
           </div>
         </div>
 
-      <div class="controls">
+      <button class="btn ghost menuToggle" id="btnMenuToggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="topControls">
+        <span class="menuToggleBar"></span>
+        <span class="menuToggleBar"></span>
+        <span class="menuToggleBar"></span>
+      </button>
+
+      <div class="controls" id="topControls">
         <!-- Tabs -->
         <button class="btn ghost active" id="tabCalendario">Calendario</button>
         <button class="btn ghost" id="tabMediciones">Mediciones</button>
@@ -45,48 +51,61 @@
 <div class="listHeader" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
   <div class="adminTitle" style="margin:0;">Tablero de acciones</div>
 
-    <div style="display:flex; gap:10px; align-items:center;">
+    <div class="listHeaderActions" style="display:flex; gap:10px; align-items:center;">
       <button class="btn" id="btnClear">Limpiar</button>
       <button class="btn" id="btnRefresh">Refrescar</button>
+      <button class="btn" id="btnInvertOrder">Invertir orden</button>
       <button class="btn primary" id="btnExport">Exportar (Excel)</button>
     </div>
 </div>
 
-        <div class="filters listFilters">
-          <div class="filterField top-search">
+        <div class="filters listFilters actionsFilters">
+          <div class="filterField top-search af-search">
             <label for="q">Buscar</label>
             <input id="q" class="input" placeholder='Ej: "Bienestar" / "Realizado" / "AR-010"...' />
           </div>
 
-          <div class="filterField">
+          <div class="filterField af-year">
             <label for="anioFiltro">Año</label>
             <select id="anioFiltro" class="input">
               <option value="">Todos</option>
             </select>
           </div>
 
-          <div class="filterField">
+          <div class="filterField af-month">
+            <label for="mesFiltro">Mes</label>
+            <select id="mesFiltro" class="input">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="filterField af-date">
+            <label for="fechaFiltro">Fecha</label>
+            <input id="fechaFiltro" class="input" type="date" />
+          </div>
+
+          <div class="filterField af-state">
             <label for="estadoFiltro">Estado</label>
             <select id="estadoFiltro" class="input"></select>
           </div>
 
-          <div class="filterField">
+          <div class="filterField af-type">
             <label for="tipoAccionFiltro">Tipo de acción</label>
             <select id="tipoAccionFiltro" class="input"></select>
           </div>
 
-          <div class="filterField">
+          <div class="filterField af-axis">
             <label for="ejeGobFiltro">Eje de gobierno</label>
             <select id="ejeGobFiltro" class="input"></select>
           </div>
 
-          <div class="filterField">
+          <div class="filterField af-line">
             <label for="lineaTematicaFiltro">Línea temática</label>
             <select id="lineaTematicaFiltro" class="input"></select>
           </div>
         </div>
 
-        <div class="tableWrap">
+        <div class="tableWrap actionsTable">
           <div class="scrollX">
             <table>
               <thead>
@@ -138,6 +157,7 @@
 
             <div class="entBarRight">
               <button id="btnEntClear" class="btn">Limpiar</button>
+              <button id="btnEntExport" class="btn">Exportar (Excel)</button>
               <button id="btnEntRefresh" class="btn primary">Refrescar</button>
             </div>
           </div>
@@ -394,7 +414,7 @@
               <select id="adm_module" class="input selectDark" style="min-width:340px;">
                 <option value="entidad_privada" selected>Entidades Privadas (ENTIDADES_PRIVADAS)</option>
                 <option value="area_contacto">Áreas GCBA (AREAS_GCBA)</option>
-                <option value="persona_reconocida">Personas reconocidas (PERSONAS)</option>
+                <option value="persona_reconocida">Personas contacto (PERSONAS)</option>
               </select>
                 <div id="admActions" style="display:flex; gap:10px; align-items:center;">
                   <div id="admActions_entidad" style="display:flex; gap:10px; align-items:center;">
@@ -465,6 +485,17 @@
               <div>
                 <label>Red de discapacidad *</label>
                 <div id="ep_cb_red_discapacidad"></div>
+              </div>
+            </div>
+
+            <div id="ep_lineas_wrap" style="margin-top:10px; display:none;">
+              <label>Líneas temáticas de interés *</label>
+              <details class="multiDrop" id="ep_lineas_drop">
+                <summary id="ep_lineas_summary">Seleccionar líneas...</summary>
+                <div id="ep_lineas_list" class="multiDropList"></div>
+              </details>
+              <div class="hint" style="margin-top:6px;">
+                Podés seleccionar más de una opción.
               </div>
             </div>
 
@@ -543,7 +574,6 @@
             <div class="hint" id="ep_contacto_hint" style="margin-top:10px;">
               * Obligatorio: Nombre y Apellido.
             </div>
-          </div>
           </div>
         </div>
 
@@ -631,7 +661,6 @@
               * Obligatorio: <b>Nombre</b> y <b>Apellido</b>.
             </div>
           </div>
-          </div>
 
         </div>
 
@@ -639,7 +668,7 @@
         <div id="admPanel_persona_reconocida" style="display:none;">
 
           <div class="section" style="margin-top:0;">
-            <div class="sectionTitle">PERSONA RECONOCIDA</div>
+            <div class="sectionTitle">PERSONA CONTACTO</div>
 
             <div class="adminFormGrid2">
               <div>
@@ -684,6 +713,16 @@
               </div>
             </div>
 
+            <div class="adminFormGrid2" style="margin-top:10px;">
+              <div style="grid-column:1 / -1;">
+                <label>Entidad vinculada (opcional)</label>
+                <div id="pr_cb_ente_id"></div>
+                <div class="hint" style="margin-top:6px;">
+                  Seleccionala si esta persona es contacto de una entidad privada.
+                </div>
+              </div>
+            </div>
+
             <div style="margin-top:10px;">
               <label>Observaciones</label>
               <textarea id="pr_per_obs" placeholder="Notas, acuerdos, etc."></textarea>
@@ -692,7 +731,6 @@
             <div class="hint" id="pr_persona_hint" style="margin-top:10px;">
               * Obligatorio: Apellido y Nombre.
             </div>
-          </div>
           </div>
 
         </div>
@@ -750,37 +788,32 @@
     <div id="medKpis" style="
       margin-top:12px;
       display:grid;
-      grid-template-columns: repeat(6, minmax(140px, 1fr));
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
       gap:12px;
     ">
-      <div class="adminMini">
-        <div class="adminMiniHead"><div>Total</div><div class="muted" id="medKpiYear">—</div></div>
-        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiTotal">—</div></div>
+      <div class="adminMini medKpiTotalCard">
+        <div class="adminMiniHead"><div>Total</div><div class="muted" id="medKpiYear"></div></div>
+        <div class="adminMiniBody"><div class="medKpiTotalValue" id="medKpiTotal">—</div></div>
       </div>
 
       <div class="adminMini">
-        <div class="adminMiniHead"><div>Realizadas</div><div class="muted">Estado</div></div>
+        <div class="adminMiniHead"><div>Realizadas</div><div class="muted"></div></div>
         <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiRealizadas">—</div></div>
       </div>
 
       <div class="adminMini">
-        <div class="adminMiniHead"><div>En Desarrollo</div><div class="muted">Estado</div></div>
+        <div class="adminMiniHead"><div>En Desarrollo</div><div class="muted"></div></div>
         <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiDesarrollo">—</div></div>
       </div>
 
       <div class="adminMini">
-        <div class="adminMiniHead"><div>Idea</div><div class="muted">Estado</div></div>
+        <div class="adminMiniHead"><div>Idea</div><div class="muted"></div></div>
         <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiIdea">—</div></div>
       </div>
 
       <div class="adminMini">
-        <div class="adminMiniHead"><div>Pendientes</div><div class="muted">Calculado</div></div>
-        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiPendientes">—</div></div>
-      </div>
-
-      <div class="adminMini">
-        <div class="adminMiniHead"><div>Líneas</div><div class="muted">Únicas</div></div>
-        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiLineas">—</div></div>
+        <div class="adminMiniHead"><div>Canceladas</div><div class="muted"></div></div>
+        <div class="adminMiniBody"><div style="font-size:28px; font-weight:800;" id="medKpiCanceladas">—</div></div>
       </div>
     </div>
 
@@ -804,7 +837,7 @@
                 <th>Idea</th>
                 <th>En Desarrollo</th>
                 <th>Realizado</th>
-                <th>Otro</th>
+                <th>Canceladas</th>
               </tr>
             </thead>
             <tbody id="medTbody">
@@ -918,6 +951,26 @@
      BOTÓN COMPAT (evita crash si App lo busca)
 ========================== -->
 <button id="btnCreate" style="display:none;"></button>
+
+  <!-- =========================
+       MODAL CALENDARIO DIA (mobile)
+  ========================== -->
+  <div class="modalBack" id="calDayBack">
+    <div class="modal">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle" id="calDayModalTitle">Acciones del dia</div>
+          <div class="hint" id="calDayModalMeta">-</div>
+        </div>
+        <div class="rowBtns">
+          <button class="btn" id="calDayBtnClose">Cerrar</button>
+        </div>
+      </div>
+      <div class="modalBody">
+        <div id="calDayModalList" class="calMobileDayList"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- =========================
        MODAL EDIT (EDICIÓN)
@@ -1109,6 +1162,27 @@
     </div>
   </div>
 
+  <!-- =========================
+       MODAL EDIT ENTIDADES
+  ========================== -->
+  <div class="modalBack" id="entEditBack">
+    <div class="modal">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle" id="entEditTitle">Editar entidad</div>
+          <div class="hint" id="entEditHint"></div>
+        </div>
+        <div class="rowBtns">
+          <button class="btn primary" id="entBtnSave">Guardar</button>
+          <button class="btn" id="entBtnClose">Cerrar</button>
+        </div>
+      </div>
+      <div class="modalBody">
+        <div id="entEditForm"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Templates: Contacto extra (Admin) -->
   <template id="ep_contact_tpl">
     <div class="contactBlock" data-contact="1" style="margin-top:10px; border-top:1px dashed var(--line); padding-top:10px;">
@@ -1216,3 +1290,10 @@
   <?!= include('App'); ?>
 </body>
 </html>
+
+
+
+
+
+
+
